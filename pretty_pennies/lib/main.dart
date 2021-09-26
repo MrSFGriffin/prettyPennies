@@ -1,11 +1,16 @@
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
 import 'package:sqflite/sqflite.dart';
 
 void main() {
-  //runApp(const MyApp());
-  runApp(const CupApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => BudgetModel(currencySymbol: euroSymbol),
+      child: const CupApp()
+    ));
 }
 
 class CupApp extends StatelessWidget {
@@ -13,8 +18,8 @@ class CupApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoApp(
-      home: const Money(),
+    return const CupertinoApp(
+      home: Money(),
       title: 'Pretty Pennies',
       theme: CupertinoThemeData(
         primaryColor: CupertinoColors.systemBlue,
@@ -25,16 +30,15 @@ class CupApp extends StatelessWidget {
 
 class Money extends StatefulWidget {
   const Money({Key? key}) : super(key : key);
-
+  
   @override
   State<Money> createState() => _money();
 }
 
+const euroSymbol = '€';
+
 class _money extends State<Money> {
   final verticalPadding = 60.0;
-  final categories = [
-    'Food', 'Petrol', 'Household', 'Kids',
-  ];
   final colours = [
     Colors.yellow, Colors.green,
     Colors.pink, Colors.blue,
@@ -55,7 +59,7 @@ class _money extends State<Money> {
           ),
         ),
         child: CupertinoPageScaffold(
-            backgroundColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
         //navigationBar: const CupertinoNavigationBar(middle: Text('MONEY')),
         child: SafeArea(
           child: Column(
@@ -87,121 +91,41 @@ class _money extends State<Money> {
                       ),
                       padding: const EdgeInsets.only(top: 20)
                     ),
-                    Row(
-                      children: [
-
-                      ]
-                    ),
-                    Padding(
-                        child: CupertinoButton(
-                          child: const Text(
-                              'Spend',
-                              style: TextStyle(color: CupertinoColors.white)),
-                          onPressed: () => {},
-                          color: CupertinoColors.systemPink,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+                    const Padding(
+                        child: SpendButton(),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20)
                     ),
                     Padding(
                       child: Container(
                         constraints: BoxConstraints(
                             maxHeight: MediaQuery.of(context).size.height - 275
                         ),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
-                            return
-                              Container(
-                                decoration: BoxDecoration(
-                                    border: Border(
-                                        left: BorderSide(
-                                          color: colours[index % colours.length],
-                                          width: 4,
-                                        ),
-                                        top: const BorderSide(
-                                            color: CupertinoColors.systemTeal,
-                                            width: 1
-                                        ),
-                                        bottom: BorderSide(
-                                            color: CupertinoColors.systemTeal,
-                                            width: index == categories.length
-                                                ? 1 : 0
-                                        )
-                                    )
-                                ),
-                                child: Padding(
-                                  child: index == categories.length
-                                      ? Row(
-                                        children: [
-                                          CupertinoButton(
-                                            child: const Text(
-                                                'Add Category',
-                                                style: TextStyle(
-                                                    color: CupertinoColors.white)),
-                                            onPressed: () => {},
-                                            color: CupertinoColors.systemPink,
-                                          )
-                                        ]
-                                      )
-                                      : Column(
-                                          children: [
-                                            Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    categories[index],
-                                                    style: const TextStyle(
-                                                      fontSize: 20
-                                                    )
-                                                  ),
-                                                  const Text(
-                                                      'left €200',
-                                                      style: TextStyle(
-                                                          fontSize: 24,
-                                                          fontWeight: FontWeight.bold
-                                                      )
-                                                  )
-                                                ]
-                                            ),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                StepProgressIndicator(
-                                                  totalSteps: 100,
-                                                  currentStep: 32,
-                                                  //customStep: (i, c, d) => Text('|'),
-                                                  size: 8,
-                                                  padding: 0,
-                                                  selectedColor: colours[index % colours.length],
-                                                  unselectedColor: lightColours[index % colours.length],
-                                                  roundedEdges: Radius.circular(10),
-                                                ),
-                                                const Padding(
-                                                  child: Text('€400'),
-                                                  padding: EdgeInsets.only(top: 5)
-                                                )
-                                              ]
-                                            )
-                                          ]
-                                      ),
-                                padding: const EdgeInsets.all(10),
-                              )
-                            );
-                          },
-                          itemCount: categories.length + 1),
+                        child: Consumer<BudgetModel>(
+                          builder: (context, budget, child) =>
+                            ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              shrinkWrap: true,
+                              itemBuilder: (context, index) {
+                                return ColouredListItem(
+                                  colour: colours[index % colours.length],
+                                  isLastItem: index >= budget.lineItems().length,
+                                  child: index == budget.lineItems().length
+                                      ? Row(children: [AddCategoryButton(budget: budget)])
+                                      : ColouredBudgetLine(
+                                          budgetLine: budget.lineItems()[index],
+                                          fillColour: colours[index % colours.length],
+                                          emptyColour: lightColours[index % lightColours.length],
+                                  )
+                                );
+                              },
+                            itemCount: budget.lineItems().length + 1),
+                        )
                       ),
                       padding: const EdgeInsets.only(bottom: 0)
                     ),
-                    Padding(
-                      child: CupertinoButton(
-                        child: const Text(
-                            'Reset Spending',
-                            style: TextStyle(color: CupertinoColors.white)),
-                        onPressed: () => {},
-                        color: CupertinoColors.systemPink,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20)
+                    const Padding(
+                      child: ResetButton(),
+                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20)
                     )
                   ],
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +150,7 @@ class ColouredListItem extends StatelessWidget {
       Key? key}) : super(key: key);
 
   final Widget child;
-  final MaterialColor colour;
+  final Color colour;
   final bool isLastItem;
 
   @override
@@ -249,10 +173,40 @@ class ColouredListItem extends StatelessWidget {
           ),
       ),
       child: Padding(
-        child: child,
+        child: Padding(
+          child: child,
+          padding: const EdgeInsets.all(10),
+        ),
         padding: const EdgeInsets.only(bottom: 0)
       )
     );
+  }
+}
+
+class BudgetModel extends ChangeNotifier {
+  BudgetModel({
+    required this.currencySymbol,
+  });
+
+  final String currencySymbol;
+  final LinkedHashMap<String, BudgetLineModel> _lines =
+    LinkedHashMap<String, BudgetLineModel>();
+
+  List<BudgetLineModel> lineItems() => _lines.values.toList();
+
+  addLine(String name, int amount) {
+    if (_lines.containsKey(name)) {
+      // todo: maybe, add some kind of user message
+      return;
+    }
+
+    _lines[name] = BudgetLineModel(
+      name: name,
+      amount: amount,
+      currencySymbol: currencySymbol,
+      spent: 0
+    );
+    notifyListeners();
   }
 }
 
@@ -292,7 +246,7 @@ class ColouredBudgetLine extends StatelessWidget {
 
   final BudgetLineModel budgetLine;
   final MaterialColor fillColour;
-  final MaterialColor emptyColour;
+  final Color emptyColour;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +289,9 @@ class ColouredBudgetLine extends StatelessWidget {
 }
 
 class AddCategoryButton extends StatelessWidget {
-  const AddCategoryButton({Key? key}) : super(key: key);
+  const AddCategoryButton({required this.budget, Key? key}) : super(key: key);
+
+  final BudgetModel budget;
 
   @override
   Widget build(BuildContext context) {
@@ -344,9 +300,40 @@ class AddCategoryButton extends StatelessWidget {
         child: const Text(
             'Add Category',
             style: TextStyle(color: CupertinoColors.white)),
-        onPressed: () => {},
+        onPressed: () => this.budget.addLine("Food", 200),
         color: CupertinoColors.systemPink,
       )
     ]);
+  }
+}
+
+class ResetButton extends StatelessWidget{
+  const ResetButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      child: const Text(
+          'Reset Spending',
+          style: TextStyle(color: CupertinoColors.white)),
+      onPressed: () => {},
+      color: CupertinoColors.systemPink,
+    );
+  }
+}
+
+class SpendButton extends StatelessWidget {
+  const SpendButton({Key? key}) : super(key : key);
+
+  @override
+  Widget build(BuildContext context) {
+    return
+      CupertinoButton(
+      child: const Text(
+          'Spend',
+          style: TextStyle(color: CupertinoColors.white)),
+      onPressed: () => {},
+      color: CupertinoColors.systemPink,
+    );
   }
 }
