@@ -1,0 +1,4 @@
+#Fri Oct 15 18:29:21 CEST 2021
+base.0=/home/stewart/src/projects/prettyPennies/pretty_pennies/build/app/intermediates/dex/debug/mergeDexDebug/classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

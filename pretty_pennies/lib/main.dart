@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:developer';
 import 'dart:collection';
+import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +9,14 @@ import 'package:provider/provider.dart';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
 import 'package:sqflite/sqflite.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  var db = DbProvider();
+  var bm = await db.getBudget(euroSymbol);
   runApp(
     ChangeNotifierProvider(
-      create: (context) => BudgetModel(currencySymbol: euroSymbol),
+      // create: (context) => BudgetModel(currencySymbol: euroSymbol),
+      create: (context) => bm,
       child: const CupApp()
     ));
 }
@@ -105,45 +112,84 @@ class ColouredListItem extends StatelessWidget {
 class BudgetModel extends ChangeNotifier {
   BudgetModel({
     required this.currencySymbol,
+    required this.persistenceProvider
   });
 
   final String currencySymbol;
   final LinkedHashMap<String, BudgetLineModel> _lines =
     LinkedHashMap<String, BudgetLineModel>();
+  final BudgetPersistenceProvider persistenceProvider;
 
   List<BudgetLineModel> lineItems() => _lines.values.toList();
   bool hasLineItems() => _lines.values.isNotEmpty;
 
-  resetSpending() {
+  Future resetSpending() async {
     for (var line in _lines.values) {
       line.resetSpending();
+      await persistenceProvider.update(line);
     }
 
     notifyListeners();
   }
 
-  spend(String name, int amount) {
+  Future spend(String name, int amount) async {
     if (!_lines.containsKey(name)) {
       return;
     }
 
-    _lines[name]?.spend(amount);
+    var line = _lines[name];
+    if (line != null) {
+      line.spend(amount);
+      await persistenceProvider.update(line);
+      notifyListeners();
+    }
+  }
+
+  Future loadLines(List<BudgetLineModel> lines) async {
+    for (var line in lines) {
+      if (_lines.containsKey(line.name)) {
+        continue;
+      }
+
+      _lines[line.name] = line;
+    }
     notifyListeners();
   }
 
-  addLine(String name, int amount) {
+  Future addLine(String name, int amount) async {
     if (_lines.containsKey(name)) {
       // todo: maybe, add some kind of user message
       return;
     }
 
-    _lines[name] = BudgetLineModel(
+    var line = BudgetLineModel(
       name: name,
       amount: amount,
       currencySymbol: currencySymbol,
       spent: 0
     );
+    _lines[name] = line;
+    await persistenceProvider.add(line);
     notifyListeners();
+  }
+}
+
+class BudgetPersistenceProvider {
+  Future add(BudgetLineModel line) async {}
+  Future update(BudgetLineModel line) async {}
+}
+
+class DbBudgetPersistenceProvider extends BudgetPersistenceProvider {
+  final DbProvider db = DbProvider();
+
+  @override
+  Future add(BudgetLineModel line) async {
+    await db.insert(line);
+  }
+
+  @override
+  Future update(BudgetLineModel line) async {
+    await db.update(line);
   }
 }
 
@@ -156,6 +202,7 @@ class BudgetLineModel {
     required spent
   }) : _spent = spent;
 
+  var id = 0;
   final String name;
   final String currencySymbol;
   final int amount;
@@ -239,100 +286,157 @@ class ColouredBudgetLine extends StatelessWidget {
   }
 }
 
-class AddCategoryUI extends StatefulWidget {
-  const AddCategoryUI({Key? key}) : super(key: key);
+class EditCategoriesUI extends StatefulWidget {
+  const EditCategoriesUI({Key? key}) : super(key: key);
 
   @override
-  State<AddCategoryUI> createState() => _AddCategory();
+  State<EditCategoriesUI> createState() => _EditCategoriesUI();
 }
 
-class _AddCategory extends State<AddCategoryUI> {
+class _EditCategoriesUI extends State<EditCategoriesUI> {
   var adding = false;
-  var category = "";
+  var removing = false;
+  var category = '';
   var amount = 0;
 
   void toggleAdding() {
     setState(() { adding = !adding; });
   }
 
-  void addBudgetLine(BudgetModel budget) {
-    budget.addLine(category, amount);
+  void toggleRemoving() {
+    setState(() { removing = !removing; });
+  }
+
+  Future addBudgetLine(BudgetModel budget) async {
+    await budget.addLine(category, amount);
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<BudgetModel>(
-      builder: (context, budget, child) => Row(children: [
-          adding
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children:[
-              Padding(
-                child: Row(
-                  children: [
-                    Column(
-                      children: const [
-                        Padding(
-                            child: Text("Category"),
-                            padding: EdgeInsets.only(bottom: 10, left: 10, right: 10)),
-                        Padding(
-                            child: Text("Amount"),
-                            padding: EdgeInsets.only(top: 10, left: 10, right: 10)),
-                      ]
-                    ),
-                    Column(
-                      children: [
-                        Padding(
-                          child: SizedBox(
-                              child: CupertinoTextField(
-                                onChanged: (c) => category = c,
-                                placeholder: "thing to budget",
-                              ),
-                              width: 200),
-                          padding: const EdgeInsets.only(bottom: 10, left: 10, right: 10)
-                        ),
-                        SizedBox(
-                            child: NumericTextField(
-                              onChanged: (a) => a == ''
-                                ? amount = 0
-                                : amount = int.parse(a),
-                              placeholder: "max to spend"
-                            ),
-                            width: 200)
-                      ]
-                    ),
-                  ]
-                ),
-                padding: const EdgeInsets.only(bottom: 10)
+      builder: (context, budget, child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            child: Text(
+              'Edit Categories',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20
               ),
-              Row(
-                children: [
+            ),
+            padding: EdgeInsets.only(bottom: 10)
+          ),
+          Row(children: [
+            adding
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:[
                   Padding(
-                    child: Consumer<BudgetModel>(
-                      builder: (context, budget, child) =>
-                        PinkButton(
-                          text: 'Add',
-                          onPressed: () => addBudgetLine(budget)
+                    child: Row(
+                      children: [
+                        Column(
+                          children: const [
+                            Padding(
+                                child: Text("Category"),
+                                padding: EdgeInsets.only(bottom: 10, left: 10, right: 10)),
+                            Padding(
+                                child: Text("Amount"),
+                                padding: EdgeInsets.only(top: 10, left: 10, right: 10)),
+                          ]
                         ),
+                        Column(
+                          children: [
+                            Padding(
+                              child: SizedBox(
+                                  child: CupertinoTextField(
+                                    onChanged: (c) => category = c,
+                                    placeholder: "thing to budget",
+                                  ),
+                                  width: 200),
+                              padding: const EdgeInsets.only(bottom: 10, left: 10, right: 10)
+                            ),
+                            SizedBox(
+                                child: NumericTextField(
+                                  onChanged: (a) => a == ''
+                                    ? amount = 0
+                                    : amount = int.parse(a),
+                                  placeholder: "max to spend"
+                                ),
+                                width: 200)
+                          ]
+                        ),
+                      ]
                     ),
-                    padding: const EdgeInsets.all(10)
+                    padding: const EdgeInsets.only(bottom: 10)
                   ),
-                  Padding(
-                      child: PinkButton(
-                        text: 'Cancel',
-                        onPressed: () => toggleAdding()
+                  Row(
+                    children: [
+                      Padding (
+                        child: Consumer<BudgetModel>(
+                          builder: (context, budget, child) =>
+                            PinkButton(
+                              text: 'Add',
+                              onPressed: () async => await addBudgetLine(budget)
+                            ),
+                        ),
+                        padding: const EdgeInsets.all(10)
                       ),
-                      padding: const EdgeInsets.all(10)
+                      SizedBox(
+                        child: PinkButton(
+                            text: 'Cancel',
+                            onPressed: () => toggleAdding()
+                        ),
+                        width: 180
+                      )
+                    ]
+                  )
+              ]
+            )
+            : removing
+              ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(category == '' ? 'Select a category' : category),
+                      const Padding(padding: EdgeInsets.only(right: 10)),
+                      Consumer<BudgetModel>(
+                        builder: (context, budget, child) =>
+                            CategorySelectorUI(
+                                budget: budget,
+                                updateFunc: (c) { setState(() {
+                                  category = c; });
+                                })
+                      )
+                    ]
                   ),
+                  const Padding(padding: EdgeInsets.only(top: 10)),
+                  PinkButton(
+                    text: 'Delete',
+                    onPressed: () { toggleRemoving(); }
+                  )
                 ]
+              )
+              : Row(
+                  children: [
+                    PinkButton(
+                      text: 'Add',
+                      onPressed: () => toggleAdding()
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10)
+                    ),
+                    PinkButton(
+                      text: 'Delete',
+                      onPressed: () => toggleRemoving()
+                    )
+                  ]
               )
             ]
           )
-          : PinkButton(
-            text: 'Add Category',
-            onPressed: () => toggleAdding()
-          )
-      ])
+        ]
+      )
     );
   }
 }
@@ -344,8 +448,8 @@ class ResetButton extends StatelessWidget{
   Widget build(BuildContext context) {
     return Consumer<BudgetModel>(
       builder: (context, budget, child) => PinkButton(
-        text: 'Reset Spending',
-        onPressed: () => budget.resetSpending(),
+        text: 'Reset',
+        onPressed: () async => await budget.resetSpending(),
     ));
   }
 }
@@ -354,11 +458,13 @@ class PinkButton extends StatelessWidget {
   const PinkButton({
     required this.text,
     required this.onPressed,
+    this.padding,
     Key? key
   }) : super(key : key);
 
   final String text;
   final VoidCallback? onPressed;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -367,9 +473,74 @@ class PinkButton extends StatelessWidget {
         child: Text(text, style: const TextStyle(color: CupertinoColors.white)),
         onPressed: onPressed,
         color: CupertinoColors.systemPink,
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
       );
   }
 }
+
+
+class CategorySelectorUI extends StatefulWidget {
+  const CategorySelectorUI({
+    required this.budget,
+    required this.updateFunc,
+    Key? key}) : super(key: key);
+
+  final BudgetModel budget;
+  final dynamic updateFunc;
+  @override
+  State<CategorySelectorUI> createState() => _CategorySelectorUI();
+}
+
+class _CategorySelectorUI extends State<CategorySelectorUI> {
+  _CategorySelectorUI();
+  var _selectedIndex = 0;
+  var _tempCategory = '';
+  var _tempSelectedIndex = 0;
+
+  pickCategory(BuildContext context, BudgetModel budget) {
+    showCupertinoDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                    child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(
+                          initialItem: _selectedIndex,
+                        ),
+                        backgroundColor: Colors.white,
+                        onSelectedItemChanged: (index) {
+                          _tempSelectedIndex = index;
+                        },
+                        itemExtent: 32.0,
+                        children: budget.lineItems().map<Widget>((bl) => Text(bl.name)).toList()
+                    ),
+                    height: 200
+                ),
+                PinkButton(
+                    text: 'Pick',
+                    onPressed: () {
+                      _selectedIndex = _tempSelectedIndex;
+                      _tempCategory = budget.lineItems()[_selectedIndex].name;
+                      widget.updateFunc(_tempCategory);
+                      Navigator.of(context, rootNavigator: true).pop();
+                    }
+                )
+              ]
+          );
+        });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PinkButton(
+        text: 'Pick',
+        onPressed: () { pickCategory(context, widget.budget); }
+    );
+  }
+}
+
 class SpendUI extends StatefulWidget {
   const SpendUI({Key? key}) : super(key: key);
 
@@ -379,53 +550,11 @@ class SpendUI extends StatefulWidget {
 
 class _SpendUI extends State<SpendUI> {
   var _spending = false;
-  var _category = "none selected";
-  var _tempCategory = "";
-  var _selectedIndex = 0;
-  var _tempSelectedIndex = 0;
+  var _category = 'none selected';
   var _amount = 0;
 
   toggleSpending() {
     setState(() { _spending = !_spending; });
-  }
-
-  pickCategory(context, budget) {
-    showCupertinoDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              child: CupertinoPicker(
-                scrollController: FixedExtentScrollController(
-                  initialItem: _selectedIndex,
-                ),
-                backgroundColor: Colors.white,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _tempSelectedIndex = index;
-                    _tempCategory = budget.lineItems()[index].name;
-                  });
-                },
-                itemExtent: 32.0,
-                children: budget.lineItems().map<Widget>((bl) => Text(bl.name)).toList()
-              ),
-              height: 200
-            ),
-            PinkButton(
-              text: 'Pick',
-              onPressed: () {
-                setState(() {
-                  _category = _tempCategory;
-                  _selectedIndex = _tempSelectedIndex;
-                });
-                Navigator.of(context, rootNavigator: true).pop();
-              }
-            )
-          ]
-        );
-      });
   }
 
   @override
@@ -437,7 +566,7 @@ class _SpendUI extends State<SpendUI> {
               child: Row(
                 children: [
                   const Padding(
-                    child:Text('Category'),
+                    child: Text('Category'),
                     padding: EdgeInsets.only(right: 10),
                   ),
                   Padding(
@@ -445,10 +574,12 @@ class _SpendUI extends State<SpendUI> {
                     padding: const EdgeInsets.only(right: 10),
                   ),
                   Consumer<BudgetModel>(
-                      builder: (context, budget, child) =>  PinkButton(
-                          text: "Pick",
-                          onPressed: () => pickCategory(context, budget)
-                      )
+                    builder: (context, budget, child) => CategorySelectorUI(
+                      budget: budget,
+                      updateFunc: (c) {
+                        setState(() { _category = c; });
+                      },
+                    )
                   ),
                 ]
               ),
@@ -478,8 +609,8 @@ class _SpendUI extends State<SpendUI> {
                   child: Consumer<BudgetModel>(
                     builder: (context, budget, child) => PinkButton(
                       text: 'Add',
-                      onPressed: () {
-                        budget.spend(_category, _amount);
+                      onPressed: () async {
+                        await budget.spend(_category, _amount);
                         toggleSpending();
                       }
                     )
@@ -550,7 +681,8 @@ class ScreenContainer extends StatelessWidget {
               backgroundColor: Colors.transparent,
               //navigationBar: const CupertinoNavigationBar(middle: Text('MONEY')),
               child: SafeArea(
-                child: Column(
+                child: SingleChildScrollView(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
@@ -565,9 +697,10 @@ class ScreenContainer extends StatelessWidget {
                           child: child
                       )
                     ]
+                  ),
                 ),
-                minimum: EdgeInsets.symmetric(
-                    horizontal: 20, vertical: verticalPadding),
+                minimum: EdgeInsets
+                    .symmetric(horizontal: 20, vertical: verticalPadding),
               )
           )
       );
@@ -605,9 +738,15 @@ class BudgetScreen extends StatelessWidget {
               ),
               padding: const EdgeInsets.only(top: 20)
           ),
-          const Padding(
-              child: SpendUI(),
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+          Padding(
+            child: Row(
+              children: const [
+                SpendUI(),
+                Padding(padding: EdgeInsets.symmetric(horizontal: 10)),
+                ResetButton()
+              ]
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
           ),
           Padding(
               child: Container(
@@ -624,7 +763,7 @@ class BudgetScreen extends StatelessWidget {
                                   colour: colours[index % colours.length],
                                   isLastItem: index >= budget.lineItems().length,
                                   child: index == budget.lineItems().length
-                                      ? Row(children: const [AddCategoryUI()])
+                                      ? Row(children: const [EditCategoriesUI()])
                                       : ColouredBudgetLine(
                                     budgetLine: budget.lineItems()[index],
                                     fillColour: colours[index % colours.length],
@@ -638,12 +777,108 @@ class BudgetScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 0)
           ),
           const Padding(
-              child: ResetButton(),
               padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20)
           )
         ],
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
       );
+  }
+}
+
+class DbProvider {
+  late Database db;
+  final String dbName = 'prettyPennies.db';
+  final String budgetLineTable = 'budgetLine';
+  final String idCol = 'id';
+  final String nameCol = 'name';
+  final String amountCol = 'amount';
+  final String spentCol = 'spent';
+  final String currencySymbolCol = 'currencySymbol';
+
+  _create (Database db, int version) async {
+    await db.execute('''
+          create table if not exists $budgetLineTable (
+            $idCol integer primary key autoincrement, 
+            $nameCol text not null,
+            $amountCol int not null,
+            $spentCol int not null,
+            $currencySymbolCol text not null
+          )
+        ''');
+  }
+
+  Future open(String path) async {
+    db = await openDatabase(
+        path,
+        version: 1,
+        onCreate: _create);
+  }
+
+  Future<BudgetLineModel> insert(BudgetLineModel budgetLine) async {
+    await open(dbName);
+    log('Inserting budgetLine name = ${budgetLine.name}');
+    var lineMap = toMap(budgetLine);
+    lineMap.remove(idCol);
+    budgetLine.id = await db.insert(budgetLineTable, lineMap);
+    log('Inserted budgetLine name = ${budgetLine.name}, id = ${budgetLine.id}');
+    await close();
+    return budgetLine;
+  }
+
+  Future<int> update(BudgetLineModel budgetLine) async {
+    await open(dbName);
+    var count = await db.update(budgetLineTable, toMap(budgetLine),
+        where: '$idCol = ?', whereArgs: [budgetLine.id]);
+    await close();
+    return count;
+  }
+
+  Future<BudgetModel> getBudget(String currencySymbol) async {
+    await open(dbName);
+    List<Map<String, Object?>> maps = await db.query(budgetLineTable,
+        columns: [idCol, nameCol, amountCol, spentCol, currencySymbolCol]);
+    await close();
+    var bm = BudgetModel(
+        currencySymbol: currencySymbol,
+        persistenceProvider: DbBudgetPersistenceProvider());
+    log('DB maps count: ${maps.length}');
+    await bm.loadLines(maps.map((m) => fromMap(m)).toList());
+    return bm;
+  }
+
+  Future<BudgetLineModel?> getBudgetLine(int id) async {
+    List<Map<String, Object?>> maps = await db.query(budgetLineTable,
+      columns: [idCol, nameCol, amountCol, spentCol, currencySymbolCol],
+      where: '$idCol = ?',
+      whereArgs: [id]);
+    if (maps.isNotEmpty) {
+      return fromMap(maps.first);
+    }
+
+    return null;
+  }
+
+  Future close() async => db.close();
+
+  Map<String, Object?> toMap(BudgetLineModel budgetLine) {
+    return <String, Object?>{
+      idCol: budgetLine.id,
+      nameCol: budgetLine.name,
+      amountCol: budgetLine.amount,
+      spentCol: budgetLine.spent(),
+      currencySymbolCol: budgetLine.currencySymbol
+    };
+  }
+
+  BudgetLineModel fromMap(Map<String, Object?> map) {
+    var bl =  BudgetLineModel(
+      name: map[nameCol] as String,
+      currencySymbol: map[currencySymbolCol] as String,
+      amount: map[amountCol] as int,
+      spent: map[spentCol] as int
+    );
+    bl.id = map[idCol] as int;
+    return bl;
   }
 }

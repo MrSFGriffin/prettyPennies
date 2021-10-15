@@ -1,0 +1,4 @@
+io/flutter/plugins/GeneratedPluginRegistrant.java
+ io.flutter.plugins.GeneratedPluginRegistrant
+com/wozzow/pretty_pennies/BuildConfig.java
+ com.wozzow.pretty_pennies.BuildConfig
