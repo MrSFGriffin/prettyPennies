@@ -132,6 +132,18 @@ class BudgetModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future delete(String name) async {
+    if (!_lines.containsKey(name)) {
+      return;
+    }
+
+    var line = _lines.remove(name);
+    if (line != null) {
+      await persistenceProvider.delete(line);
+      notifyListeners();
+    }
+  }
+
   Future spend(String name, int amount) async {
     if (!_lines.containsKey(name)) {
       return;
@@ -177,6 +189,7 @@ class BudgetModel extends ChangeNotifier {
 class BudgetPersistenceProvider {
   Future add(BudgetLineModel line) async {}
   Future update(BudgetLineModel line) async {}
+  Future delete(BudgetLineModel line) async {}
 }
 
 class DbBudgetPersistenceProvider extends BudgetPersistenceProvider {
@@ -190,6 +203,11 @@ class DbBudgetPersistenceProvider extends BudgetPersistenceProvider {
   @override
   Future update(BudgetLineModel line) async {
     await db.update(line);
+  }
+
+  @override
+  Future delete(BudgetLineModel line) async {
+    await db.delete(line);
   }
 }
 
@@ -412,9 +430,14 @@ class _EditCategoriesUI extends State<EditCategoriesUI> {
                     ]
                   ),
                   const Padding(padding: EdgeInsets.only(top: 10)),
-                  PinkButton(
-                    text: 'Delete',
-                    onPressed: () { toggleRemoving(); }
+                  Consumer<BudgetModel>(
+                    builder: (context, budget, child) => PinkButton(
+                      text: 'Delete',
+                      onPressed: () async {
+                        await budget.delete(category);
+                        toggleRemoving();
+                      }
+                    )
                   )
                 ]
               )
@@ -832,6 +855,13 @@ class DbProvider {
         where: '$idCol = ?', whereArgs: [budgetLine.id]);
     await close();
     return count;
+  }
+
+  Future delete(BudgetLineModel budgetLine) async {
+    await open(dbName);
+    await db.delete(
+        budgetLineTable, where: '$idCol = ?', whereArgs: [budgetLine.id]);
+    await close();
   }
 
   Future<BudgetModel> getBudget(String currencySymbol) async {
