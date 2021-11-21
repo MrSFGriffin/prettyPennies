@@ -42,7 +42,7 @@ rule CXX_EXECUTABLE_LINKER__pretty_pennies
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /snap/flutter/101/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
+  command = /snap/flutter/111/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
   description = Re-running CMake...
   generator = 1
 

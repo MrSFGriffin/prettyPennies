@@ -34,7 +34,7 @@ include rules.ninja
 # Utility command for install/strip
 
 build CMakeFiles/install/strip.util: CUSTOM_COMMAND all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/101/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/111/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -44,7 +44,7 @@ build install/strip: phony CMakeFiles/install/strip.util
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/101/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/111/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
   DESC = No interactive CMake dialog available...
   restat = 1
 build edit_cache: phony CMakeFiles/edit_cache.util
@@ -99,7 +99,7 @@ build intermediates_do_not_run/pretty_pennies: CXX_EXECUTABLE_LINKER__pretty_pen
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/101/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/111/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -114,7 +114,7 @@ build list_install_components: phony
 # Utility command for install/local
 
 build CMakeFiles/install/local.util: CUSTOM_COMMAND all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/101/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/111/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -124,7 +124,7 @@ build install/local: phony CMakeFiles/install/local.util
 # Utility command for install
 
 build CMakeFiles/install.util: CUSTOM_COMMAND all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/101/usr/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug && /snap/flutter/111/usr/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -139,7 +139,7 @@ build install: phony CMakeFiles/install.util
 # Utility command for install/strip
 
 build flutter/CMakeFiles/install/strip.util: CUSTOM_COMMAND flutter/all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -149,7 +149,7 @@ build flutter/install/strip: phony flutter/CMakeFiles/install/strip.util
 # Utility command for install/local
 
 build flutter/CMakeFiles/install/local.util: CUSTOM_COMMAND flutter/all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -164,7 +164,7 @@ build flutter/flutter_assemble: phony flutter/CMakeFiles/flutter_assemble /home/
 # Utility command for edit_cache
 
 build flutter/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
   DESC = No interactive CMake dialog available...
   restat = 1
 build flutter/edit_cache: phony flutter/CMakeFiles/edit_cache.util
@@ -173,7 +173,7 @@ build flutter/edit_cache: phony flutter/CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build flutter/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -H/home/stewart/src/projects/prettyPennies/pretty_pennies/linux -B/home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -188,7 +188,7 @@ build flutter/list_install_components: phony
 # Utility command for install
 
 build flutter/CMakeFiles/install.util: CUSTOM_COMMAND flutter/all
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -203,7 +203,7 @@ build flutter/CMakeFiles/flutter_assemble: phony /home/stewart/src/projects/pret
 # Custom command for /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/libflutter_linux_gtk.so
 
 build /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/libflutter_linux_gtk.so /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_basic_message_channel.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_binary_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_binary_messenger.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_dart_project.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_engine.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_json_message_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_json_method_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_message_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_call.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_channel.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_response.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_plugin_registrar.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_plugin_registry.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_standard_message_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_standard_method_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_string_codec.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_value.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_view.h /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/flutter_linux.h flutter/_phony_: CUSTOM_COMMAND
-  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/101/usr/bin/cmake -E env FLUTTER_ROOT=/home/stewart/snap/flutter/common/flutter PROJECT_DIR=/home/stewart/src/projects/prettyPennies/pretty_pennies DART_DEFINES=Zmx1dHRlci5pbnNwZWN0b3Iuc3RydWN0dXJlZEVycm9ycz10cnVl,RkxVVFRFUl9XRUJfQVVUT19ERVRFQ1Q9dHJ1ZQ== DART_OBFUSCATION=false TRACK_WIDGET_CREATION=true TREE_SHAKE_ICONS=false PACKAGE_CONFIG=/home/stewart/src/projects/prettyPennies/pretty_pennies/.dart_tool/package_config.json FLUTTER_TARGET=/home/stewart/src/projects/prettyPennies/pretty_pennies/lib/main.dart /home/stewart/snap/flutter/common/flutter/packages/flutter_tools/bin/tool_backend.sh linux-x64 Debug
+  COMMAND = cd /home/stewart/src/projects/prettyPennies/pretty_pennies/build/linux/x64/debug/flutter && /snap/flutter/111/usr/bin/cmake -E env FLUTTER_ROOT=/home/stewart/snap/flutter/common/flutter PROJECT_DIR=/home/stewart/src/projects/prettyPennies/pretty_pennies DART_DEFINES=Zmx1dHRlci5pbnNwZWN0b3Iuc3RydWN0dXJlZEVycm9ycz10cnVl,RkxVVFRFUl9XRUJfQVVUT19ERVRFQ1Q9dHJ1ZQ== DART_OBFUSCATION=false TRACK_WIDGET_CREATION=true TREE_SHAKE_ICONS=false PACKAGE_CONFIG=/home/stewart/src/projects/prettyPennies/pretty_pennies/.dart_tool/package_config.json FLUTTER_TARGET=/home/stewart/src/projects/prettyPennies/pretty_pennies/lib/main.dart /home/stewart/snap/flutter/common/flutter/packages/flutter_tools/bin/tool_backend.sh linux-x64 Debug
   DESC = Generating /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/libflutter_linux_gtk.so, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_basic_message_channel.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_binary_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_binary_messenger.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_dart_project.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_engine.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_json_message_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_json_method_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_message_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_call.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_channel.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_method_response.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_plugin_registrar.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_plugin_registry.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_standard_message_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_standard_method_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_string_codec.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_value.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/fl_view.h, /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/flutter_linux/flutter_linux.h, _phony_
   restat = 1
 # =============================================================================
@@ -238,13 +238,13 @@ default all
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/generated_config.cmake /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/generated_plugins.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeCXXInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeGenericSystem.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInitialize.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/CMakeCommonCompilerMacros.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/Clang-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/Clang.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/GNU.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPackageHandleStandardArgs.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPackageMessage.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPkgConfig.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-Clang-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-GNU-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-GNU.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.10.2/CMakeCXXCompiler.cmake CMakeFiles/3.10.2/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/generated_config.cmake /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/generated_plugins.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeCXXInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeGenericSystem.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInitialize.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/CMakeCommonCompilerMacros.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/Clang-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/Clang.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/GNU.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPackageHandleStandardArgs.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPackageMessage.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPkgConfig.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-Clang-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-GNU-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-GNU.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.10.2/CMakeCXXCompiler.cmake CMakeFiles/3.10.2/CMakeSystem.cmake
   pool = console
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/generated_config.cmake /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/generated_plugins.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeCXXInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeGenericSystem.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInformation.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInitialize.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/CMakeCommonCompilerMacros.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/Clang-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/Clang.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Compiler/GNU.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPackageHandleStandardArgs.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPackageMessage.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/FindPkgConfig.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-Clang-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-GNU-CXX.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux-GNU.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/Linux.cmake /snap/flutter/101/usr/share/cmake-3.10/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.10.2/CMakeCXXCompiler.cmake CMakeFiles/3.10.2/CMakeSystem.cmake: phony
+build /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/CMakeLists.txt /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/ephemeral/generated_config.cmake /home/stewart/src/projects/prettyPennies/pretty_pennies/linux/flutter/generated_plugins.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeCXXInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeGenericSystem.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInformation.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/CMakeSystemSpecificInitialize.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/CMakeCommonCompilerMacros.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/Clang-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/Clang.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Compiler/GNU.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPackageHandleStandardArgs.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPackageMessage.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/FindPkgConfig.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-Clang-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-GNU-CXX.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux-GNU.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/Linux.cmake /snap/flutter/111/usr/share/cmake-3.10/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.10.2/CMakeCXXCompiler.cmake CMakeFiles/3.10.2/CMakeSystem.cmake: phony
 
 #############################################
 # Clean all the built files.
