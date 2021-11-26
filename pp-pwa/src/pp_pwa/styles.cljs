@@ -29,7 +29,6 @@
   []
   {:height "100vh"})
 
-
 (defclass level1
   []
   {:color :green})
