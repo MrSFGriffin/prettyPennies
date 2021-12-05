@@ -4,7 +4,14 @@
            garden.def/defkeyframes clojure.core/def
            garden.def/defrule clojure.core/def
            garden.def/defstyles clojure.core/def
-           garden.def/defstylesheet clojure.core/def}
+           garden.def/defstylesheet clojure.core/def
+           orchestra.core/defn-spec clj-kondo.lint-as/def-catch-all
+           net.danielcompton.defn-spec-alpha/defn schema.core/defn
+           com.rpl.specter/defcollector clojure.core/defn
+           com.rpl.specter/defdynamicnav clojure.core/defn
+           com.rpl.specter/defmacroalias clojure.core/def
+           com.rpl.specter/defnav clojure.core/defn
+           com.rpl.specter/defrichnav clojue.core/defn}
  :linters {:unresolved-symbol {:exclude [goog.DEBUG]}
            :unused-namespace {:exclude [cljs.repl]}
            :unused-referred-var {:exclude {cljs.repl [Error->map

@@ -10,6 +10,11 @@
  (fn-traced [_ _]
    db/default-db))
 
+(re-frame/reg-event-db
+ ::toggle-adding-item
+ (fn-traced [db _]
+  (update db :adding-item not)))
+
 (re-frame/reg-event-fx
   ::navigate
   (fn-traced [_ [_ handler]]
