@@ -52,3 +52,13 @@
  ::adding-item
  (fn [db]
    (:adding-item db)))
+
+(re-frame/reg-sub
+ ::new-item-name-error
+ (fn [db]
+   (get-in db [:new-item :name-error])))
+
+(re-frame/reg-sub
+ ::new-item-amount-error
+ (fn [db]
+   (get-in db [:new-item :amount-error])))

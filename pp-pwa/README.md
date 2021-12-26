@@ -3,6 +3,9 @@
 A [re-frame](https://github.com/day8/re-frame) application designed to ... well, that part is up to
 you.
 
+Run dev: npm run watch
+Run tests: karma start
+
 ## Getting Started
 
 ### Project Overview
