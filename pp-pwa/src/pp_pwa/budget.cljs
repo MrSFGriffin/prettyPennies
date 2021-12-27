@@ -23,32 +23,60 @@
 
 (defn remove-item
   "Removes an item from a budget."
-  [budget item-id]
-  (remove #{= (:budget-item-id budget) item-id} budget))
+  [budget item]
+  (let [item-id (:budget-item-id item)]
+    (remove #(= (:budget-item-id %) item-id) budget)))
+
+(defn for-items
+  "Applies fn to either all items or, if pred, those for which pred is true."
+  ([budget fn] (for-items budget fn #(identity true)))
+  ([budget fn pred]
+   (vec (map #(if (pred %) (fn %) %) budget))))
+
+(defn assoc-in-items
+  "assoc-in value to kws of each item in budget. If pred, then only on items for which pred is true."
+  ([budget kws v] (assoc-in-items budget kws v #(identity true)))
+  ([budget kws v pred]
+   (for-items budget
+              #(assoc-in % kws v)
+              pred)))
+
+(defn is-item?
+  "Checks if item has the supplied item-id"
+  [item-id item]
+  (= (:budget-item-id item) item-id))
 
 (defn spend
   "Increase the spend on an item of a budget."
-  [budget item-id amount]
-  (for [item budget :when (= (:budget-item-id item) item-id)]
-    (update-in item [:spent :amount] + amount)))
+  [budget item amount]
+  (let [item-id (:budget-item-id item)]
+    (for-items budget
+               #(update-in % [:spent :amount] + amount)
+               #(is-item? item-id %))))
+
+(defn reset-all-items
+  "Resets spending on all items of a budget."
+  [budget]
+  (assoc-in-items budget [:spent :amount] 0))
 
 (defn reset-item
-  "Resets the spend of an item."
-  [budget item-id]
-  (for [item budget :when (= (:budget-item-id item) item-id)]
-    (assoc-in item [:spent :amount] 0)))
+  "Resets spending on an item."
+  [budget item]
+  (let [item-id (:budget-item-id item)]
+    (assoc-in-items budget [:spent :amount] 0 #(is-item? item-id %))))
 
 (defn set-limit-amount
   "Sets the limit amount of a budget-item of a budget."
-  [budget item-id amount]
-  (for [item budget :when (= (:budget-item-id item) item-id)]
-    (assoc-in item [:limit :amount] amount)))
+  [budget item amount]
+  (let [item-id (:budget-item-id item)]
+    (assoc-in-items budget [:limit :amount] amount #(is-item? item-id %))))
 
 (defn set-limit-currency
   "Sets the limit currency of a budget-item of a budget."
-  [budget item-id currency-code]
-  (for [item budget :when (= (:budget-item-id item) item-id)]
-    (assoc-in item [:limit :currency] currency-code))
-  ;; spent and limit need to be in the same currency
-  (for [item budget :when (= (:budget-item-id item) item-id)]
-    (assoc-in item [:spent :currency] currency-code)))
+  [budget item currency-code]
+  (let [item-id (:budget-item-id item)]
+    (assoc-in-items
+     budget [:limit :currency] currency-code #(is-item? item-id %))
+    ;; spent and limit need to be in the same currency
+    (assoc-in-items
+     budget [:spent :currency] currency-code #(is-item? item-id %))))

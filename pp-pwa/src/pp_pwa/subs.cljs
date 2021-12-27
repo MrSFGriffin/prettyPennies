@@ -40,6 +40,7 @@
 (defn-spec colour-budget ::specs/budget
   "Adds colours to the items of a budget."
   [budget ::specs/budget]
+  (js/console.log budget)
   (map #(assoc %1 :colour %2) budget (cycle (budget-item-colours))))
 
 (re-frame/reg-sub
@@ -62,3 +63,18 @@
  ::new-item-amount-error
  (fn [db]
    (get-in db [:new-item :amount-error])))
+
+(re-frame/reg-sub
+ ::selected-item-id
+ (fn [db]
+   (get db :selected-item-id)))
+
+(re-frame/reg-sub
+ ::spending-item-id
+ (fn [db]
+   (get-in db [:spending :item-id])))
+
+(re-frame/reg-sub
+ ::spending-amount-error
+ (fn [db]
+   (get-in db [:spending :amount-error])))
