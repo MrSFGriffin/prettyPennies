@@ -55,6 +55,11 @@
    (:adding-item db)))
 
 (re-frame/reg-sub
+ ::resetting-all
+ (fn [db]
+   (:resetting-all db)))
+
+(re-frame/reg-sub
  ::new-item-name-error
  (fn [db]
    (get-in db [:new-item :name-error])))

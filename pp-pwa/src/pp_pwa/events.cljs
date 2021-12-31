@@ -192,10 +192,19 @@
       (assoc-in db [:edit-item :name-error] "Duplicate item name")))))
 
 (re-frame/reg-event-db
+ ::toggle-resetting-all
+ (fn-traced
+  [db [_ _]]
+  (update db :resetting-all not)))
+
+(re-frame/reg-event-db
  ::reset-all-items
  (fn-traced
   [db [_ _]]
-  (update db :budget budget/reset-all-items)))
+  (let [updated (update db :budget budget/reset-all-items)]
+    (if (s/valid? ::specs/budget (:budget db))
+      (update updated :resetting-all not)
+      db))))
 
 (re-frame/reg-event-db
  ::reset-item

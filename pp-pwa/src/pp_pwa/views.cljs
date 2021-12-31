@@ -288,15 +288,24 @@
        #(re-frame/dispatch [::events/add-item])
        (or name-error amount-error))]]))
 
+(defn reset-all-panel
+  []
+  [:div
+   {:style {:margin-top "2em"}}
+   [:h4 "Reset spending on all items?"]
+   [pink-button "No" #(re-frame/dispatch [::events/toggle-resetting-all])]
+   [pink-button "Yes" #(re-frame/dispatch [::events/reset-all-items])]])
+
 (defn budget-control-panel [budget]
-  (let [adding-item @(re-frame/subscribe [::subs/adding-item])]
+  (let [adding-item @(re-frame/subscribe [::subs/adding-item])
+        resetting-all @(re-frame/subscribe [::subs/resetting-all])]
     [:div
      {:style {:margin-bottom "1em"
               :margin-top "1em"
               :padding "1em 1em 1em 0.1em"
               :border-top budget-item-border-style}}
      [:> ui/Grid
-      (when (not adding-item)
+      (when (not (or adding-item resetting-all))
         [:div
          [:> ui/Grid.Column
           {:width 5
@@ -310,9 +319,10 @@
              {:style {:margin-left "1em"}}
              (pink-button
               "Reset all"
-              #(re-frame/dispatch [::events/reset-all-items]))])]])]
-     (when adding-item
-       [add-item-panel])]))
+              #(re-frame/dispatch [::events/toggle-resetting-all]))])]])]
+     (cond
+       adding-item [add-item-panel]
+       resetting-all [reset-all-panel])]))
 
 (defn budget-panel [budget]
   (let [selected-item-id @(re-frame/subscribe [::subs/selected-item-id])
