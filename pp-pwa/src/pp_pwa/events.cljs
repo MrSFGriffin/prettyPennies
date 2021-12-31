@@ -207,10 +207,19 @@
       db))))
 
 (re-frame/reg-event-db
+ ::toggle-reset-item
+ (fn-traced
+  [db [_ _]]
+  (update db :reset-item not)))
+
+(re-frame/reg-event-db
  ::reset-item
  (fn-traced
   [db [_ item]]
-  (update db :budget budget/reset-item item)))
+  (let [updated (update db :budget budget/reset-item item)]
+    (if (s/valid? ::specs/budget (:budget updated))
+      (assoc updated :reset-item false)
+      db))))
 
 (re-frame/reg-event-fx
   ::navigate

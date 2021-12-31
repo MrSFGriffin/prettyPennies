@@ -131,8 +131,17 @@
       [pink-button "Cancel" #(re-frame/dispatch [::events/cancel-spending])]
       [pink-button "Spend" #(re-frame/dispatch [::events/spend])]]]))
 
+(defn reset-panel
+  [item]
+  [:div
+   {:style {:padding-bottom "0.5em"}}
+   [:h4 "Reset spending?"]
+   [pink-button "No" #(re-frame/dispatch [::events/toggle-reset-item])]
+   [pink-button "Yes" #(re-frame/dispatch [::events/reset-item item])]])
+
 (defn item-controls
-  [item colour spending editing]
+  [item colour spending editing resetting]
+  (js/console.log  "item = " item)
   [:> ui/Grid.Row
    {:style {:margin-top "-0.1em"}}
    [:> ui/Grid.Column
@@ -144,16 +153,20 @@
     (cond
       spending (spend-panel item)
       editing (edit-panel item)
+      resetting (reset-panel item)
       :else [:div
              {:style {:padding-bottom "0.3em"}}
              [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
              [pink-button "Spend" #(re-frame/dispatch [::events/spending item])]
-             [pink-button "Reset" #(re-frame/dispatch [::events/reset-item item])]])]])
+             (when (> (get-in item [:spent :amount]) 0)
+              [pink-button "Reset" #(re-frame/dispatch [::events/toggle-reset-item])])])]])
 
-(defn budget-item-row [item selected-item-id spending-item-id edit-item-id]
+(defn budget-item-row
+  [item selected-item-id spending-item-id edit-item-id reset-item]
   (let [item-id (:budget-item-id item)
         spending (= item-id spending-item-id)
         editing (= item-id edit-item-id)
+        resetting reset-item
         selected (= item-id selected-item-id)
         limit (-> item :limit :amount)
         spent (-> item :spent :amount)
@@ -216,7 +229,7 @@
         (str (-> item :limit :currency-code)
              (-> item :limit :amount))]]]
      (when selected
-       [item-controls item colour spending editing])]))
+       [item-controls item colour spending editing resetting])]))
 
 (defn spend-control-panel
   []
@@ -327,10 +340,11 @@
 (defn budget-panel [budget]
   (let [selected-item-id @(re-frame/subscribe [::subs/selected-item-id])
         spending-item-id @(re-frame/subscribe [::subs/spending-item-id])
-        edit-item-id @(re-frame/subscribe [::subs/edit-item-id])]
+        edit-item-id @(re-frame/subscribe [::subs/edit-item-id])
+        reset-item @(re-frame/subscribe [::subs/reset-item])]
   [:> ui/Grid
    (map
-    #(budget-item-row % selected-item-id spending-item-id edit-item-id)
+    #(budget-item-row % selected-item-id spending-item-id edit-item-id reset-item)
     budget)
    [:> ui/Grid.Row
     {:style {:padding-top 0}}
