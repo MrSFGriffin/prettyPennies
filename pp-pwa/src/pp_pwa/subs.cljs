@@ -78,3 +78,18 @@
  ::spending-amount-error
  (fn [db]
    (get-in db [:spending :amount-error])))
+
+(re-frame/reg-sub
+ ::edit-item-id
+ (fn [db]
+   (get-in db [:edit-item :item-id])))
+
+(re-frame/reg-sub
+ ::edit-item-name-error
+ (fn [db]
+   (get-in db [:edit-item :name-error])))
+
+(re-frame/reg-sub
+ ::edit-item-amount-error
+ (fn [db]
+   (get-in db [:edit-item :amount-error])))

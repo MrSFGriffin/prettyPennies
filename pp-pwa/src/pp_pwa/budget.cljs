@@ -65,6 +65,12 @@
   (let [item-id (:budget-item-id item)]
     (assoc-in-items budget [:spent :amount] 0 #(is-item? item-id %))))
 
+(defn set-item-name
+  "Sets the name of a budget-item of a budget."
+  [budget item name]
+  (let [item-id (:budget-item-id item)]
+    (assoc-in-items budget [:budget-item-name] name #(is-item? item-id %))))
+
 (defn set-limit-amount
   "Sets the limit amount of a budget-item of a budget."
   [budget item amount]

@@ -83,18 +83,6 @@
                   "Duplicate item name"))))))
 
 (re-frame/reg-event-db
- ::spending
- (fn-traced
-  [db [_ item]]
-  (assoc-in db [:spending :item-id] (:budget-item-id item))))
-
-(re-frame/reg-event-db
- ::cancel-spending
- (fn-traced
-  [db [_ _]]
-  (assoc db :spending nil)))
-
-(re-frame/reg-event-db
  ::select-item
  (fn-traced
   [db [_ item]]
@@ -108,6 +96,18 @@
  (fn-traced
   [db [_ _]]
    (assoc db :selected-item-id nil)))
+
+(re-frame/reg-event-db
+ ::spending
+ (fn-traced
+  [db [_ item]]
+  (assoc-in db [:spending :item-id] (:budget-item-id item))))
+
+(re-frame/reg-event-db
+ ::cancel-spending
+ (fn-traced
+  [db [_ _]]
+  (assoc db :spending nil)))
 
 (re-frame/reg-event-db
  ::set-spending-amount
@@ -133,6 +133,63 @@
     (-> db
         (update :budget budget/spend item amount)
         (assoc :spending nil)))))
+
+(re-frame/reg-event-db
+ ::editing
+ (fn-traced
+  [db [_ item]]
+  (assoc-in db [:edit-item :item-id] (:budget-item-id item))))
+
+(re-frame/reg-event-db
+ ::cancel-editing
+ (fn-traced
+  [db [_ _]]
+  (assoc db :edit-item nil)))
+
+(re-frame/reg-event-db
+ ::set-edit-item-name
+ (fn-traced
+  [db [_ name]]
+  (assert ::specs/budget-item-name name)
+  (assoc-in db [:edit-item :name] name)))
+
+(re-frame/reg-event-db
+ ::set-edit-item-name-error
+ (fn-traced
+  [db [_ msg]]
+  (assert string? msg)
+  (assoc-in db [:edit-item :name-error] msg)))
+
+(re-frame/reg-event-db
+ ::set-edit-item-amount
+ (fn-traced
+  [db [_ amount]]
+  (assert ::specs/amount amount)
+  (assoc-in db [:edit-item :amount] amount)))
+
+(re-frame/reg-event-db
+ ::set-edit-item-amount-error
+ (fn-traced
+  [db [_ msg]]
+  (assert string? msg)
+  (assoc-in db [:edit-item :amount-error] msg)))
+
+(re-frame/reg-event-db
+ ::edit
+ (fn-traced
+  [db [_ _]]
+  (let [item-id (get-in db [:edit-item :item-id])
+        name (get-in db [:edit-item :name])
+        amount (get-in db [:edit-item :amount])
+        item {:budget-item-id item-id}
+        updated
+        (-> db
+            (update :budget budget/set-item-name item name)
+            (update :budget budget/set-limit-amount item amount)
+            (assoc :edit-item nil))]
+    (if (s/valid? ::specs/budget updated)
+      updated
+      (assoc-in db [:edit-item :name-error] "Duplicate item name")))))
 
 (re-frame/reg-event-db
  ::reset-all-items
