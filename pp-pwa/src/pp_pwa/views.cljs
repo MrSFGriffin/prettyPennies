@@ -43,7 +43,7 @@
 
 (defn update-amount
   [event set-amount-key set-error-key]
-  (let [value (js/parseInt (-> event .-target .-valueAsNumber))]
+  (let [value (js/parseInt ( * 100 (-> event .-target .-valueAsNumber)))]
     (if (and ; todo: move most of this to the set event
          (-> event .-target .-validity .-valid)
          (s/valid? ::specs/amount value))
@@ -84,6 +84,7 @@
                      ::events/set-edit-item-amount
                      ::events/set-edit-item-amount-error)
         :error (some? amount-error)
+        :step 0.01
         :type "number"
         :min 0
         :default-value (get-in item [:limit :amount])
@@ -116,6 +117,7 @@
               :text-align "left"}}
      [:> ui/Input
       {:label (get-in item [:spent :currency-code])
+       :step 0.01
        :type "number"
        :on-change #(update-spending-amount %)
        :error (some? amount-error)
@@ -170,13 +172,17 @@
         selected (= item-id selected-item-id)
         limit (-> item :limit :amount)
         spent (-> item :spent :amount)
-        left (- limit spent)
+        left (/ (- limit spent) 100)
+        limit (/ limit 100)
+        spent (/ spent 100)
         negative (< left 0)
         label (cond
                 (not negative) "left"
                 negative "minus"
                 :else "")
         colour (item :colour)]
+    (js/console.log "limit amount = " limit)
+    (js/console.log "spent amount = " spent)
     [:> ui/Grid.Row
      {:style {:padding-bottom 0
               :margin-bottom "-14px"}}
@@ -227,7 +233,7 @@
                 :padding-right "0.5em"}}
        [:div
         (str (-> item :limit :currency-code)
-             (-> item :limit :amount))]]]
+             limit)]]]
      (when selected
        [item-controls item colour spending editing resetting])]))
 
@@ -284,6 +290,7 @@
         {:label "Limit"
          :name "add-item-amount"
          :error (some? amount-error)
+         :step 0.01
          :type "number"
          :min 0
          :on-change #(update-new-item-amount %)
