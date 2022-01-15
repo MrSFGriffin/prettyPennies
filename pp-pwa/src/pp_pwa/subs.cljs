@@ -16,6 +16,11 @@
    (:active-panel db)))
 
 (re-frame/reg-sub
+ ::loading
+ (fn [db _]
+   (:loading db)))
+
+(re-frame/reg-sub
  ::budget
  (fn [db]
    (:budget db)))
@@ -103,3 +108,8 @@
  ::edit-item-amount-error
  (fn [db]
    (get-in db [:edit-item :amount-error])))
+
+(re-frame/reg-sub
+ ::delete-item-id
+ (fn [db]
+   (get-in db [:delete-item :item-id])))

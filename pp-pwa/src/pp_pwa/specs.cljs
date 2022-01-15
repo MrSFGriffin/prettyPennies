@@ -56,7 +56,8 @@
                                       ::budget-item-name
                                       ::spent
                                       ::limit]
-                          :opt-un [::budget-item-colours]))
+                             :opt-un [::budget-item-colours
+                                      ::id]))
 (s/def ::budget (s/and (s/coll-of ::budget-item)
                        distinct-budget-item-names?))
 

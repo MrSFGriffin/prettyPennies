@@ -8,6 +8,7 @@
    [re-frame.core :as re-frame]
    [pp-pwa.events :as events]
    [pp-pwa.routes :as routes]
+   [pp-pwa.storage :as storage]
    [pp-pwa.views :as views]
    [pp-pwa.config :as config]))
 
@@ -30,8 +31,18 @@
     (rdom/unmount-component-at-node root-el)
     (rdom/render [views/main-panel] root-el)))
 
+(defn load-budget
+  "Load budget from persistent storage"
+  []
+  (re-frame/dispatch [::events/toggle-loading])
+  (storage/get-budget-items
+   #(do
+      (re-frame/dispatch [::events/set-budget %])
+      (re-frame/dispatch [::events/toggle-loading]))))
+
 (defn init []
   (routes/start!)
   (re-frame/dispatch-sync [::events/initialize-db])
+  (load-budget)
   (dev-setup)
   (mount-root))

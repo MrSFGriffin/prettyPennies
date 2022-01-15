@@ -6,7 +6,7 @@
    [pp-pwa.events :as events]))
 
 (defmulti panels identity)
-(defmethod panels :default [] [:div "No panel found for this route."])
+(defmethod panels :default [] [:div "Loading"])
 
 (def routes
   (atom

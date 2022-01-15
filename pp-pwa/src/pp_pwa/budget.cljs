@@ -86,3 +86,7 @@
     ;; spent and limit need to be in the same currency
     (assoc-in-items
      budget [:spent :currency] currency-code #(is-item? item-id %))))
+
+(defn get-item
+  [budget item-id]
+  (first (filter #(= item-id (:budget-item-id %)) budget)))

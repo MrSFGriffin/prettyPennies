@@ -1,10 +1,12 @@
 (ns pp-pwa.events
   (:require
    [cljs.spec.alpha :as s]
+   [expound.alpha :as ex]
    [re-frame.core :as re-frame]
    [pp-pwa.budget :as budget]
    [pp-pwa.db :as db]
    [pp-pwa.specs :as specs]
+   [pp-pwa.storage :as storage]
    [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
 (re-frame/reg-event-db
@@ -12,6 +14,18 @@
  (fn-traced
   [_ _]
   db/default-db))
+
+(re-frame/reg-event-db
+ ::toggle-loading
+ (fn-traced
+  [db [_ budget]]
+  (update db :loading not)))
+
+(re-frame/reg-event-db
+ ::set-budget
+ (fn-traced
+  [db [_ budget]]
+  (assoc db :budget budget)))
 
 (re-frame/reg-event-db
  ::toggle-adding-item
@@ -77,7 +91,9 @@
                       (update-in [:budget] conj item)
                       (update :adding-item not))]
       (if (s/valid? ::specs/budget (:budget updated))
-        updated
+        (do
+          (storage/save-budget-item item #(js/console.log "saved item"))
+          updated)
         (assoc-in db
                   [:new-item :name-error]
                   "Duplicate item name"))))))
@@ -138,7 +154,10 @@
  ::editing
  (fn-traced
   [db [_ item]]
-  (assoc-in db [:edit-item :item-id] (:budget-item-id item))))
+  (let [updated (assoc-in db [:edit-item :item-id] (:budget-item-id item))
+        updated (assoc-in updated [:edit-item :name] (:budget-item-name item))
+        updated (assoc-in updated [:edit-item :amount] (-> item :limit :amount))]
+    updated)))
 
 (re-frame/reg-event-db
  ::cancel-editing
@@ -181,15 +200,41 @@
   (let [item-id (get-in db [:edit-item :item-id])
         name (get-in db [:edit-item :name])
         amount (get-in db [:edit-item :amount])
-        item {:budget-item-id item-id}
-        updated
-        (-> db
-            (update :budget budget/set-item-name item name)
-            (update :budget budget/set-limit-amount item amount)
-            (assoc :edit-item nil))]
-    (if (s/valid? ::specs/budget updated)
-      updated
-      (assoc-in db [:edit-item :name-error] "Duplicate item name")))))
+        item (budget/get-item (:budget db) item-id)
+        updated (-> db
+                    (update :budget budget/set-item-name item name)
+                    (update :budget budget/set-limit-amount item amount)
+                    (assoc :edit-item nil))]
+    (js/console.log "updated = " (clj->js updated))
+    (if (s/valid? ::specs/budget (:budget updated))
+      (do
+        (storage/save-budget-item item #(js/console.log "Updated item."))
+        updated)
+      (assoc-in db [:edit-item :name-error]
+                (ex/expound ::specs/budget (:budget updated)))))))
+
+(re-frame/reg-event-db
+ ::deleting
+ (fn-traced
+ [db [_ item]]
+ (assoc-in db [:delete-item :item-id] (:budget-item-id item))))
+
+ (re-frame/reg-event-db
+  ::cancel-deleting
+  (fn-traced
+   [db [_ item]]
+   (assoc db :delete-item nil)))
+
+(re-frame/reg-event-db
+ ::delete
+ (fn-traced
+  [db [_ item-id]]
+  (let [item {:budget-item-id item-id :id item-id}
+        budget (:budget db)
+        budget (vec (remove #(= item-id (:budget-item-id %)) budget))
+        updated (assoc db :budget  budget)]
+    (storage/delete-budget-item item #(js/console.log "Deleted item."))
+    updated)))
 
 (re-frame/reg-event-db
  ::toggle-resetting-all
