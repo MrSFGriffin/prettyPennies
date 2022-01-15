@@ -145,10 +145,16 @@
   [db [_ _]]
   (let [item-id (get-in db [:spending :item-id])
         amount (get-in db [:spending :amount])
-        item {:budget-item-id item-id}]
-    (-> db
-        (update :budget budget/spend item amount)
-        (assoc :spending nil)))))
+        item {:budget-item-id item-id}
+        updated (-> db
+                    (update :budget budget/spend item amount)
+                    (assoc :spending nil))
+        item (->> updated
+                  :budget
+                  (filter #(= item-id (:budget-item-id %)))
+                  first)]
+    (storage/save-budget-item item #(js/console.log "Item updated."))
+      updated)))
 
 (re-frame/reg-event-db
  ::editing
@@ -204,11 +210,11 @@
         updated (-> db
                     (update :budget budget/set-item-name item name)
                     (update :budget budget/set-limit-amount item amount)
-                    (assoc :edit-item nil))]
-    (js/console.log "updated = " (clj->js updated))
+                    (assoc :edit-item nil))
+        item (budget/get-item (:budget updated) item-id)]
     (if (s/valid? ::specs/budget (:budget updated))
       (do
-        (storage/save-budget-item item #(js/console.log "Updated item."))
+        (storage/save-budget-item item #(js/console.log "Item updated."))
         updated)
       (assoc-in db [:edit-item :name-error]
                 (ex/expound ::specs/budget (:budget updated)))))))
@@ -248,7 +254,11 @@
   [db [_ _]]
   (let [updated (update db :budget budget/reset-all-items)]
     (if (s/valid? ::specs/budget (:budget db))
-      (update updated :resetting-all not)
+      (let [updated (update updated :resetting-all not)
+            budget (:budget updated)
+            msg-fn #(js/console.log "Item updated.")]
+        (map #(storage/save-budget-item % msg-fn) budget)
+        updated)
       db))))
 
 (re-frame/reg-event-db
@@ -261,9 +271,15 @@
  ::reset-item
  (fn-traced
   [db [_ item]]
-  (let [updated (update db :budget budget/reset-item item)]
+  (let [updated (update db :budget budget/reset-item item)
+        item (->> updated
+                 :budget
+                 (filter #(= (:budget-item-id item) (:budget-item-id %)))
+                 first)]
     (if (s/valid? ::specs/budget (:budget updated))
-      (assoc updated :reset-item false)
+      (do
+        (storage/save-budget-item item #(js/console.log "Item updated."))
+        (assoc updated :reset-item false))
       db))))
 
 (re-frame/reg-event-fx
