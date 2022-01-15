@@ -1,7 +1,7 @@
 {
-  "name": "Pretty Order",
-  "short_name": "Pretty Order",
-  "description": "A pretty app for ordering things.",
+  "name": "Pretty Money",
+  "short_name": "Pretty Money",
+  "description": "A pretty budget app.",
   "icons": [
     {
       "src": "img/icon32.png",
@@ -14,7 +14,7 @@
       "type": "image/png"
     }
   ],
-  "start_url": "/index.html",
+  "start_url": "/",
   "display": "fullscreen",
   "theme_color": "#B12A34",
   "background_color": "#B12A34"
