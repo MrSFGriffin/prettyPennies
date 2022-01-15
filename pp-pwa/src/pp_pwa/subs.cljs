@@ -45,7 +45,6 @@
 (defn-spec colour-budget ::specs/budget
   "Adds colours to the items of a budget."
   [budget ::specs/budget]
-  (js/console.log budget)
   (map #(assoc %1 :colour %2) budget (cycle (budget-item-colours))))
 
 (re-frame/reg-sub
