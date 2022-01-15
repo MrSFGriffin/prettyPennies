@@ -3,11 +3,12 @@
   <head>
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Pretty Pennies</title>
+    <link rel="manifest"  href="po.webmanifest">
+    <title>Money</title>
   </head>
   <body class="back">
     <noscript>
-      Pretty Pennies is a JavaScript app. Please enable JavaScript to continue.
+      This is a JavaScript app. Please enable JavaScript to continue.
     </noscript>
     <div id="app"></div>
     <script src="/js/compiled/app.js"></script>
@@ -20,4 +21,18 @@
         rel="stylesheet"
         href="/style.css" />
   </body>
+  <script>
+   if('serviceWorker' in navigator) {
+       window.addEventListener('load', () => {
+           navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log(`service worker registered succesfully ${registration}`)
+                    })
+                    .catch((err) => {
+                        console.log(`Error registring ${err}`)
+                    })
+       })
+   } else {
+       console.log(`Service worker is not supported in this browser.`)
+   }  </script>
 </html>

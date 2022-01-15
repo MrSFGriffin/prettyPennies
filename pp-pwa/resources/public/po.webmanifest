@@ -1,0 +1,21 @@
+{
+  "name": "Pretty Order",
+  "short_name": "Pretty Order",
+  "description": "A pretty app for ordering things.",
+  "icons": [
+    {
+      "src": "img/icon32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icon512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/index.html",
+  "display": "fullscreen",
+  "theme_color": "#B12A34",
+  "background_color": "#B12A34"
+}
