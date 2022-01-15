@@ -199,8 +199,8 @@
         spent (/ spent 100)
         negative (< left 0)
         label (cond
-                (not negative) "left"
-                negative "minus"
+                (not negative) ""
+                negative "-"
                 :else "")
         colour (item :colour)]
     [:> ui/Grid.Row
@@ -401,6 +401,8 @@
         budget @(re-frame/subscribe [::subs/coloured-budget])]
     (assert ::specs/budget budget)
     [:div
+     {:style {:max-width "96%"
+              :padding-left "4%"}}
      [:> ui/Grid
       {:class (styles/full-height)
        :text-align "center"
