@@ -83,6 +83,7 @@
      [:div
       [:> ui/Input
        {:label "Name"
+        :auto-focus true
         :on-change #(update-item-name
                      %
                      ::events/set-edit-item-name
@@ -141,6 +142,7 @@
      [:> ui/Input
       {:label (get-in item [:spent :currency-code])
        :step 0.01
+       :auto-focus true
        :type "number"
        :on-change #(update-spending-amount %)
        :error (some? amount-error)
@@ -205,6 +207,7 @@
         colour (item :colour)]
     [:> ui/Grid.Row
      {:style {:padding-bottom 0
+              :min-width "25em"
               :margin-bottom "-14px"}}
      [:> ui/Grid.Column
       {:width 1}]
@@ -256,20 +259,6 @@
      (when selected
        [item-controls item colour spending editing resetting])]))
 
-(defn spend-control-panel
-  []
-  [:> ui/Grid.Row
-   [:> ui/Grid
-    [:> ui/Grid.Column
-     {:width 1}]
-    [:> ui/Grid.Column
-     {:width 4
-      :style {:margin "0 1em 0.7em 0"}}
-     (pink-button "Spend")]
-      [:> ui/Grid.Column
-       {:width 4}
-       (pink-button "Reset")]]])
-
 (defn update-new-item-amount
   "Updates the new item limit amount."
   [event]
@@ -289,6 +278,7 @@
       [:div
        [:> ui/Input
         {:label "Name"
+         :auto-focus true
          :error (some? name-error)
          :name "add-item-name"
          :default-value ""
@@ -342,8 +332,7 @@
     [:div
      {:style {:margin-bottom "1em"
               :margin-top "1em"
-              :padding "1em 1em 1em 0.1em"
-              :border-top budget-item-border-style}}
+              :padding "1em 1em 1em 0.1em"}}
      [:> ui/Grid
       (when (not (or adding-item resetting-all))
         [:div
@@ -373,13 +362,7 @@
    (map
     #(budget-item-row % selected-item-id spending-item-id edit-item-id reset-item)
     budget)
-   [:> ui/Grid.Row
-    {:style {:padding-top 0}}
-    [:> ui/Grid.Column
-     {:width 1}]
-    [:> ui/Grid.Column
-     {:width 13}
-     (budget-control-panel budget)]]]))
+   ]))
 
 (defn money-panel [budget]
   ;{:pre [(s/valid? ::specs/budget budget)]}
@@ -388,21 +371,28 @@
     (let [name (re-frame/subscribe [::subs/name])]
       [:> ui/Card
        {:centered true}
-       [:> ui/Grid.Row
-        [:h1 {:style {:margin "0.3em 0 0.3em 0"}} @name]]
-       (when (> 0 (count budget))
-         [:> ui/Grid.Row
-          [spend-control-panel]])
-       [:> ui/Grid.Row
-        (budget-panel budget)]])))
+       [:h1 {:style {:margin "0.3em 0 1em 0"}} @name]
+       [:> ui/Grid
+        [:> ui/Grid.Row
+         (budget-panel budget)]
+        [:> ui/Grid.Row
+         {:style {:padding-top 0}}
+         [:> ui/Grid.Column
+          {:width 1}]
+         [:> ui/Grid.Column
+          {:width 13}
+          (budget-control-panel budget)]]
+        ]
+       ])))
 
 (defn home-panel []
   (let [loading @(re-frame/subscribe [::subs/loading])
         budget @(re-frame/subscribe [::subs/coloured-budget])]
     (assert ::specs/budget budget)
     [:div
-     {:style {:max-width "96%"
-              :padding-left "4%"}}
+     {:class "outer-div"
+      :style {:max-width "94%"
+              :padding-left "6%"}}
      [:> ui/Grid
       {:class (styles/full-height)
        :text-align "center"
@@ -412,7 +402,11 @@
                  {:background-color "white"
                   :min-height "20%"
                   :max-width "40%"}
-                 {})}
+                 {
+                  :max-height "80%"
+                  :overflow-y "auto"
+                  :overflow-x "hidden"
+                  })}
        (if loading
          [:> ui/Loader
           {:active true

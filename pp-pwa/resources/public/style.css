@@ -1,3 +1,8 @@
 .ui.progress .bar {
     min-width: 0!important;
 }
+
+html, body, .outer-div {
+    overscroll-behavior: none;
+    overflow: disable;
+}
