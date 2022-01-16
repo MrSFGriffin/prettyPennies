@@ -5,6 +5,7 @@ you.
 
 Run dev: npm run watch
 Run tests: karma start
+Production release: npm run release
 
 ## Getting Started
 
