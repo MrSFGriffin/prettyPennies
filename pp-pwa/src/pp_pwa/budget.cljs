@@ -90,3 +90,8 @@
 (defn get-item
   [budget item-id]
   (first (filter #(= item-id (:budget-item-id %)) budget)))
+
+(defn sum-limits
+  "Sums the amounts of the limits of the items of a budget."
+  [budget]
+  (reduce + (map #(-> % :limit :amount) budget)))

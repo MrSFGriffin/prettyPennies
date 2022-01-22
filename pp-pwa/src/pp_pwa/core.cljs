@@ -36,9 +36,15 @@
   []
   (re-frame/dispatch [::events/toggle-loading])
   (storage/get-budget-items
-   #(do
-      (re-frame/dispatch [::events/set-budget %])
-      (re-frame/dispatch [::events/toggle-loading]))))
+   (fn [b]
+     (re-frame/dispatch [::events/set-budget b])
+     (storage/get-plan-income
+      (fn [i]
+        (re-frame/dispatch [::events/set-plan-income i])
+        (storage/get-plan-items
+         (fn [items]
+           (re-frame/dispatch [::events/set-plan-items items])
+           (re-frame/dispatch [::events/toggle-loading]))))))))
 
 (defn init []
   (routes/start!)

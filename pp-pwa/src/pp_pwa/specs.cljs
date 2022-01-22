@@ -60,6 +60,8 @@
                                       ::id]))
 (s/def ::budget (s/and (s/coll-of ::budget-item)
                        distinct-budget-item-names?))
+(s/def ::income ::amount)
+(s/def ::plan (s/keys :req-un [::income ::budget]))
 
 (defn humanise-errors
   "Gives human friendly error messages for budget spec failures."
@@ -72,4 +74,3 @@
          "pp-pwa.specs/distinct-budget-item-names?")
     "Budget item names must be unique."
     "Invalid budget"))
-

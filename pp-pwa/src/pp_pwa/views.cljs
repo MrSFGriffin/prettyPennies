@@ -4,6 +4,7 @@
    [cljs.spec.alpha :as s]
    [re-frame.core :as re-frame]
    [reagent.core :as reagent :refer [atom]]
+   [pp-pwa.budget :as budget]
    [pp-pwa.styles :as styles]
    [pp-pwa.events :as events]
    [pp-pwa.routes :as routes]
@@ -72,7 +73,8 @@
   (let [name-error @(re-frame/subscribe [::subs/edit-item-name-error])
         amount-error @(re-frame/subscribe [::subs/edit-item-amount-error])
         delete-item-id @(re-frame/subscribe [::subs/delete-item-id])
-        new-binding 0]
+        new-binding 0
+        view-mode @(re-frame/subscribe [::subs/view-mode])]
     [:div
      {:style {:padding-bottom "0.3em"
               :text-align "left"}}
@@ -122,7 +124,7 @@
          (re-frame/dispatch [::events/cancel-editing])
          (re-frame/dispatch [::events/cancel-deleting]))]
      [pink-button "Save"
-      #(re-frame/dispatch [::events/edit item])
+      #(re-frame/dispatch [::events/edit item view-mode])
       (or (some? amount-error) (some? name-error))]]))
 
 (defn update-spending-amount
@@ -168,24 +170,29 @@
 
 (defn item-controls
   [item colour spending editing resetting]
-  [:> ui/Grid.Row
-   {:style {:margin-top "-0.1em"}}
-   [:> ui/Grid.Column
-    {:width 13
-     :style {:margin-left "3em"
-             :padding-left "0.3em"
-             :padding-top "0.2em"
-             :border-left (str "3px solid " (colour :css))}}
-    (cond
-      spending (spend-panel item)
-      editing (edit-panel item)
-      resetting (reset-panel item)
-      :else [:div
-             {:style {:padding-bottom "0.3em"}}
-             [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
-             [pink-button "Spend" #(re-frame/dispatch [::events/spending item])]
-             (when (> (get-in item [:spent :amount]) 0)
-               [pink-button "Reset" #(re-frame/dispatch [::events/toggle-reset-item])])])]])
+  (let [view-mode @(re-frame/subscribe [::subs/view-mode])
+        allow-spend (not (= view-mode :plan))]
+    [:> ui/Grid.Row
+     {:style {:margin-top "-0.1em"}}
+     [:> ui/Grid.Column
+      {:width 13
+       :style {:margin-left "3em"
+               :padding-left "0.3em"
+               :padding-top "0.2em"
+               :border-left (str "3px solid " (colour :css))}}
+      (cond
+        spending (spend-panel item)
+        editing (edit-panel item)
+        resetting (reset-panel item)
+        :else [:div
+               {:style {:padding-bottom "0.3em"}}
+               [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
+               (when allow-spend
+                 [pink-button "Spend"
+                  #(re-frame/dispatch [::events/spending item])]
+                 (when (> (get-in item [:spent :amount]) 0)
+                   [pink-button "Reset"
+                    #(re-frame/dispatch [::events/toggle-reset-item])]))])]]))
 
 (defn budget-item-row
   [item selected-item-id spending-item-id edit-item-id reset-item]
@@ -204,7 +211,9 @@
                 (not negative) ""
                 negative "-"
                 :else "")
-        colour (item :colour)]
+        colour (item :colour)
+        view-mode @(re-frame/subscribe [::subs/view-mode])
+        planning (= :plan view-mode)]
     [:> ui/Grid.Row
      {:style {:padding-bottom 0
               :min-width "25em"
@@ -230,11 +239,12 @@
          {:style {:padding 0}}
          [:> ui/Grid.Column
           {:text-align "left"}
-          [:> ui/Progress
-           {:size "tiny"
-            :total limit
-            :value (min spent limit)
-            :color (colour :name)}]]]]]]
+          (when (not planning)
+            [:> ui/Progress
+             {:size "tiny"
+              :total limit
+              :value (min spent limit)
+              :color (colour :name)}])]]]]]
      [:> ui/Grid.Column ; right of item row (but goes to far right, so background on chlidren)
       {:width 8
        :on-click (if (and selected (or spending editing))
@@ -251,11 +261,12 @@
         (str label " "
              (-> item :spent :currency-code)
              (currency-str (Math/abs left)))]]
-      [:> ui/Grid.Row
-       {:style {:padding-bottom "0.3em"
-                :padding-right "0.5em"}}
-       [:div
-        (str (-> item :limit :currency-code) (currency-str limit))]]]
+      (when (not planning)
+        [:> ui/Grid.Row
+         {:style {:padding-bottom "0.3em"
+                  :padding-right "0.5em"}}
+         [:div
+          (str (-> item :limit :currency-code) (currency-str limit))]])]
      (when selected
        [item-controls item colour spending editing resetting])]))
 
@@ -267,9 +278,11 @@
    ::events/set-new-item-amount
    ::events/set-new-item-amount-error))
 
-(defn add-item-panel []
+(defn add-item-panel
+  []
   (let [name-error @(re-frame/subscribe [::subs/new-item-name-error])
-        amount-error @(re-frame/subscribe [::subs/new-item-amount-error])]
+        amount-error @(re-frame/subscribe [::subs/new-item-amount-error])
+        view-mode @(re-frame/subscribe [::subs/view-mode])]
     [:> ui/Grid.Row
      {:align "left"
       :style {:margin-top "0.7em"
@@ -314,7 +327,7 @@
        "Cancel" #(re-frame/dispatch [::events/toggle-adding-item]))
       (pink-button
        "Add"
-       #(re-frame/dispatch [::events/add-item])
+       #(re-frame/dispatch [::events/add-item view-mode])
        (or name-error amount-error))]]))
 
 (defn reset-all-panel
@@ -353,41 +366,148 @@
        adding-item [add-item-panel]
        resetting-all [reset-all-panel])]))
 
-(defn budget-panel [budget]
+(defn budget-list-panel [budget]
   (let [selected-item-id @(re-frame/subscribe [::subs/selected-item-id])
         spending-item-id @(re-frame/subscribe [::subs/spending-item-id])
         edit-item-id @(re-frame/subscribe [::subs/edit-item-id])
         reset-item @(re-frame/subscribe [::subs/reset-item])]
   [:> ui/Grid
    (map
-    #(budget-item-row % selected-item-id spending-item-id edit-item-id reset-item)
+    #(budget-item-row %
+                      selected-item-id
+                      spending-item-id
+                      edit-item-id
+                      reset-item)
     budget)
    ]))
 
-(defn money-panel [budget]
+(defn budget-panel
+  [budget]
+  [:> ui/Grid
+   [:> ui/Grid.Row
+    (budget-list-panel budget)]
+   [:> ui/Grid.Row
+    {:style {:padding-top 0}}
+    [:> ui/Grid.Column
+     {:width 1}]
+    [:> ui/Grid.Column
+     {:width 13}
+     (budget-control-panel budget)]]])
+
+(defn adjust-income-panel
+  [income]
+  (let [income-error @(re-frame/subscribe [::subs/income-error])]
+    [:> ui/Grid
+     [:> ui/Grid.Row
+      {:centered true}
+      [:> ui/Grid.Column
+       [:> ui/Input
+        {:label "Income"
+         :on-change #(update-amount
+                      %
+                      ::events/set-income
+                      ::events/set-income-error)
+         :error (some? income-error)
+         :step 0.01
+         :type "number"
+         :min 0
+         :default-value income
+         :style {:margin-bottom "1em"
+                 :margin-left "1em"
+                 :max-width "11em"}}]
+       [:div
+        {:style {:margin-bottom "1em"
+                 :margin-left "1em"}}
+        [pink-button "Save" #(re-frame/dispatch [::events/adjust-income])]
+        [pink-button "Cancel" #(re-frame/dispatch [::events/stop-adjusting-income])]]]]]))
+
+(defn plan-panel
+  [plan]
+  (let [income (/ (:income plan) 100)
+        outgoing (/ (budget/sum-limits (:budget plan)) 100)
+        balance (- income outgoing)
+        minus (< balance 0)
+        adjusting-income @(re-frame/subscribe [::subs/adjusting-income])]
+    [:div
+     {:style {:margin-top "1em"}}
+     [:> ui/Grid
+      [:> ui/Grid.Row
+       {:centered true
+        :on-click
+        (if adjusting-income
+          #()
+          #(re-frame/dispatch [::events/start-adjusting-income income]))}
+       [:> ui/Grid.Column
+        {:width 14}
+        [:> ui/Card
+         [:> ui/Grid
+          [:> ui/Grid.Row
+           {:centered true}
+           [:> ui/Grid.Column
+            {:width 5}
+            [:h5 (currency-str income) " Income"]]
+           [:> ui/Grid.Column
+            {:width 5}
+            [:h5 (currency-str outgoing) " Outgoing"]]
+           [:> ui/Grid.Column
+            {:width 5
+             :text-align "left"}
+            [:h5
+             {:style {:color (if minus "red" "#737588")}}
+             (currency-str balance) " Balance"]]]
+          (when adjusting-income
+            [:> ui/Grid.Row
+             [:> ui/Grid.Column
+              {:width 16}
+              [adjust-income-panel income]]])]]]]]
+     [budget-panel (:budget plan)]]))
+
+(defn active-menu-link
+  [name view-mode]
+  [:a
+   {:style {:font-size 20
+            :text-decoration "underline"}
+    :on-click #(re-frame/dispatch [::events/set-view-mode view-mode])}
+   name])
+
+(defn inactive-menu-link
+  [name]
+  [:span
+   {:style {:font-size 20
+            :font-color "gray"
+            :text-decoration "none"}}
+   name])
+
+(defn money-panel [budget plan view-mode]
   ;{:pre [(s/valid? ::specs/budget budget)]}
   (if (not (s/valid? ::specs/budget budget))
     (js/console.log "invalid budget in money-panel: " (clj->js budget) ", explanation: " (s/explain ::specs/budget budget))
     (let [name (re-frame/subscribe [::subs/name])]
       [:> ui/Card
        {:centered true}
-       [:h1 {:style {:margin "0.3em 0 1em 0"}} @name]
+       [:h1 {:style {:margin "0.3em 0 0.5em 0"}} @name]
        [:> ui/Grid
         [:> ui/Grid.Row
-         (budget-panel budget)]
-        [:> ui/Grid.Row
-         {:style {:padding-top 0}}
+         [:> ui/Grid.Column {:width 4}]
          [:> ui/Grid.Column
-          {:width 1}]
+          {:width 4}
+          (if (= view-mode :budget)
+            [inactive-menu-link "Spend"]
+            [active-menu-link "Spend" :budget])]
          [:> ui/Grid.Column
-          {:width 13}
-          (budget-control-panel budget)]]
-        ]
-       ])))
+          {:width 4}
+          (if (= view-mode :plan)
+            [inactive-menu-link "Plan"]
+            [active-menu-link "Plan" :plan])]]]
+       (cond
+         (= view-mode :budget) (budget-panel budget)
+         (= view-mode :plan) (plan-panel plan))])))
 
 (defn home-panel []
   (let [loading @(re-frame/subscribe [::subs/loading])
-        budget @(re-frame/subscribe [::subs/coloured-budget])]
+        budget @(re-frame/subscribe [::subs/coloured-budget])
+        plan @(re-frame/subscribe [::subs/coloured-plan])
+        view-mode @(re-frame/subscribe [::subs/view-mode])]
     (assert ::specs/budget budget)
     [:div
      {:class "outer-div"
@@ -402,17 +522,15 @@
                  {:background-color "white"
                   :min-height "20%"
                   :max-width "40%"}
-                 {
-                  :max-height "80%"
+                 {:max-height "80%"
                   :overflow-y "auto"
-                  :overflow-x "hidden"
-                  })}
+                  :overflow-x "hidden"})}
        (if loading
          [:> ui/Loader
           {:active true
            :size "massive"}
           [:h1 "Loading"]]
-         (money-panel budget))]]]))
+         (money-panel budget plan view-mode))]]]))
 
 (defmethod routes/panels :home-panel [] [home-panel])
 

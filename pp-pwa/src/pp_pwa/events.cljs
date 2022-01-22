@@ -28,6 +28,18 @@
   (assoc db :budget budget)))
 
 (re-frame/reg-event-db
+ ::set-plan-income
+ (fn-traced
+  [db [_ income]]
+  (assoc-in db [:plan :income] income)))
+
+(re-frame/reg-event-db
+ ::set-plan-items
+ (fn-traced
+  [db [_ items]]
+  (assoc-in db [:plan :budget] items)))
+
+(re-frame/reg-event-db
  ::toggle-adding-item
  (fn-traced
   [db _]
@@ -77,22 +89,30 @@
 (re-frame/reg-event-db
  ::add-item
  (fn-traced
-  [db [_ _]]
+  [db [_ view-mode]]
   (let [name (get-in db [:new-item :name])
         amount (get-in db [:new-item :amount])
         item {:budget-item-name name
               :spent {:amount 0 :currency-code "€"}
               :limit {:amount amount :currency-code "€"}}
-        budget (:budget db)
+        budget (cond
+                 (= view-mode :budget) (:budget db)
+                 (= view-mode :plan) (-> db :plan :budget))
+        update-in-keys (cond
+                         (= view-mode :budget) [:budget]
+                         (= view-mode :plan) [:plan :budget])
+        save-fn (cond
+                     (= view-mode :budget) storage/save-budget-item
+                     (= view-mode :plan) storage/save-plan-item)
         id-map {:budget-item-id (budget/next-item-id budget)}
         item (conj item id-map)]
     (assert ::specs/budget-item item)
     (let [updated (-> db
-                      (update-in [:budget] conj item)
+                      (update-in update-in-keys conj item)
                       (update :adding-item not))]
       (if (s/valid? ::specs/budget (:budget updated))
         (do
-          (storage/save-budget-item item #(js/console.log "saved item"))
+          (save-fn item #(js/console.log "saved item"))
           updated)
         (assoc-in db
                   [:new-item :name-error]
@@ -202,19 +222,26 @@
 (re-frame/reg-event-db
  ::edit
  (fn-traced
-  [db [_ _]]
+  [db [_ _ view-mode]]
+  (js/console.log "view-mode = " (clj->js view-mode))
   (let [item-id (get-in db [:edit-item :item-id])
         name (get-in db [:edit-item :name])
-        amount (get-in db [:edit-item :amount])
-        item (budget/get-item (:budget db) item-id)
+        amt (get-in db [:edit-item :amount])
+        keys (cond
+               (= view-mode :budget) [:budget]
+               (= view-mode :plan) [:plan :budget])
+        save-fn (cond
+                  (= view-mode :budget) storage/save-budget-item
+                  (= view-mode :plan) storage/save-plan-item)
+        item (budget/get-item (get-in db keys) item-id)
         updated (-> db
-                    (update :budget budget/set-item-name item name)
-                    (update :budget budget/set-limit-amount item amount)
+                    (update-in keys budget/set-item-name item name)
+                    (update-in keys budget/set-limit-amount item amt)
                     (assoc :edit-item nil))
-        item (budget/get-item (:budget updated) item-id)]
+        item (budget/get-item (get-in updated keys) item-id)]
     (if (s/valid? ::specs/budget (:budget updated))
       (do
-        (storage/save-budget-item item #(js/console.log "Item updated."))
+        (save-fn item #(js/console.log "Item updated."))
         updated)
       (assoc-in db [:edit-item :name-error]
                 (ex/expound ::specs/budget (:budget updated)))))))
@@ -293,3 +320,46 @@
  (fn-traced
   [{:keys [db]} [_ active-panel]]
   {:db (assoc db :active-panel active-panel)}))
+
+(re-frame/reg-event-db
+ ::set-view-mode
+ (fn-traced
+  [db [_ view-mode]]
+  (assoc db :view-mode view-mode)))
+
+(re-frame/reg-event-db
+ ::start-adjusting-income
+ (fn-traced
+  [db [_ amount]]
+  (assoc db :income-adjustment {:amount amount})))
+
+(re-frame/reg-event-db
+ ::stop-adjusting-income
+ (fn-traced
+  [db [_ _]]
+  (assoc db :income-adjustment nil)))
+
+(re-frame/reg-event-db
+ ::set-income
+ (fn-traced
+  [db [_ amount]]
+  (assert ::specs/amount amount)
+  (assoc-in db [:income-adjustment :amount] amount)))
+
+(re-frame/reg-event-db
+ ::set-income-error
+ (fn-traced
+  [db [_ msg]]
+  (assert string? msg)
+  (assoc-in db [:income-adjustment :error] msg)))
+
+(re-frame/reg-event-db
+ ::adjust-income
+ (fn-traced
+  [db _]
+  (let [amount (-> db :income-adjustment :amount)
+        updated (-> db
+                    (assoc-in [:plan :income] amount)
+                    (update :income-adjustment not))]
+    (storage/save-plan-income amount #(js/console.log "Updated income."))
+    updated)))

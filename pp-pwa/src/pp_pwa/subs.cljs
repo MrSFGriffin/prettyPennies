@@ -11,6 +11,11 @@
    (:name db)))
 
 (re-frame/reg-sub
+ ::view-mode
+ (fn [db _]
+   (:view-mode db)))
+
+(re-frame/reg-sub
  ::active-panel
  (fn [db _]
    (:active-panel db)))
@@ -52,6 +57,19 @@
  (fn [_ _] (re-frame/subscribe [::budget]))
  (fn [budget _]
    (colour-budget budget)))
+
+(re-frame/reg-sub
+ ::plan
+ (fn [db]
+   (:plan db)))
+
+(re-frame/reg-sub
+ ::coloured-plan
+ (fn [_ _] (re-frame/subscribe [::plan]))
+ (fn [plan _]
+   (let [budget (:budget plan)
+         coloured-budget (colour-budget budget)]
+     (assoc plan :budget coloured-budget))))
 
 (re-frame/reg-sub
  ::adding-item
@@ -112,3 +130,13 @@
  ::delete-item-id
  (fn [db]
    (get-in db [:delete-item :item-id])))
+
+(re-frame/reg-sub
+ ::adjusting-income
+ (fn [db]
+   (-> db :income-adjustment)))
+
+(re-frame/reg-sub
+ ::income-error
+ (fn [db]
+   (-> db :income-adjustment :income-error)))
