@@ -256,7 +256,6 @@
                 :padding "0.4em"}}
        [:div
         {:style {:color (if (not negative) "black" "red")
-                 :font-weight "bold"
                  :font-size "1.3em"}}
         (str label " "
              (-> item :spent :currency-code)
@@ -385,6 +384,7 @@
   [budget]
   [:> ui/Grid
    [:> ui/Grid.Row
+    {:style {:padding-top 0}}
     (budget-list-panel budget)]
    [:> ui/Grid.Row
     {:style {:padding-top 0}}
@@ -429,7 +429,6 @@
         minus (< balance 0)
         adjusting-income @(re-frame/subscribe [::subs/adjusting-income])]
     [:div
-     {:style {:margin-top "1em"}}
      [:> ui/Grid
       [:> ui/Grid.Row
        {:centered true
@@ -462,21 +461,6 @@
               [adjust-income-panel income]]])]]]]]
      [budget-panel (:budget plan)]]))
 
-(defn active-menu-link
-  [name view-mode]
-  [:a
-   {:style {:font-size 20
-            :text-decoration "underline"}
-    :on-click #(re-frame/dispatch [::events/set-view-mode view-mode])}
-   name])
-
-(defn inactive-menu-link
-  [name]
-  [:span
-   {:style {:font-size 20
-            :font-color "gray"
-            :text-decoration "none"}}
-   name])
 
 (defn money-panel [budget plan view-mode]
   ;{:pre [(s/valid? ::specs/budget budget)]}
@@ -488,20 +472,22 @@
        [:h1 {:style {:margin "0.3em 0 0.5em 0"}} @name]
        [:> ui/Grid
         [:> ui/Grid.Row
-         [:> ui/Grid.Column {:width 4}]
+         {:centered true}
          [:> ui/Grid.Column
-          {:width 4}
-          (if (= view-mode :budget)
-            [inactive-menu-link "Spend"]
-            [active-menu-link "Spend" :budget])]
+          {:width 14}
+          [:> ui/Tab
+           {:panes [{:menuItem "Spend"}
+                    {:menuItem "Plan"}]
+            :onTabChange #(let [index (.-activeIndex %2)]
+                            (cond
+                              (= index 0) (re-frame/dispatch [::events/set-view-mode :budget])
+                              (= index 1) (re-frame/dispatch [::events/set-view-mode :plan])))}]]]
+        [:> ui/Grid.Row
+         {:style {:margin-top "-1em"}}
          [:> ui/Grid.Column
-          {:width 4}
-          (if (= view-mode :plan)
-            [inactive-menu-link "Plan"]
-            [active-menu-link "Plan" :plan])]]]
-       (cond
-         (= view-mode :budget) (budget-panel budget)
-         (= view-mode :plan) (plan-panel plan))])))
+          (cond
+            (= view-mode :budget) [budget-panel budget]
+            (= view-mode :plan) [plan-panel plan])]]]])))
 
 (defn home-panel []
   (let [loading @(re-frame/subscribe [::subs/loading])
