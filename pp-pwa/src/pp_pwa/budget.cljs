@@ -95,3 +95,8 @@
   "Sums the amounts of the limits of the items of a budget."
   [budget]
   (reduce + (map #(-> % :limit :amount) budget)))
+
+(defn sum-spents
+  "Sums the amounts of the limits of the items of a budget."
+  [budget]
+  (reduce + (map #(-> % :spent :amount) budget)))

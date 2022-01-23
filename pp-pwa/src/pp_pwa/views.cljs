@@ -59,14 +59,16 @@
 
 (defn delete-panel
   [delete-item-id]
-  [:div
-   [:h3 "Delete?"]
-   [pink-button "Yes" #(do
-                         (re-frame/dispatch [::events/cancel-editing])
-                         (re-frame/dispatch [::events/cancel-deleting])
-                         (re-frame/dispatch [::events/deselect-all])
-                         (re-frame/dispatch [::events/delete delete-item-id]))]
-   [pink-button "No" #(re-frame/dispatch [::events/cancel-deleting])]])
+  (let [view-mode @(re-frame/subscribe [::subs/view-mode])]
+    [:div
+     [:h3 "Delete?"]
+     [pink-button "Yes"
+      #(do
+         (re-frame/dispatch [::events/cancel-editing])
+         (re-frame/dispatch [::events/cancel-deleting])
+         (re-frame/dispatch [::events/deselect-all])
+         (re-frame/dispatch [::events/delete delete-item-id view-mode]))]
+     [pink-button "No" #(re-frame/dispatch [::events/cancel-deleting])]]))
 
 (defn edit-panel
   [item]
@@ -143,6 +145,7 @@
               :text-align "left"}}
      [:> ui/Input
       {:label (get-in item [:spent :currency-code])
+       :id "spend-amount-input"
        :step 0.01
        :auto-focus true
        :type "number"
@@ -171,7 +174,8 @@
 (defn item-controls
   [item colour spending editing resetting]
   (let [view-mode @(re-frame/subscribe [::subs/view-mode])
-        allow-spend (not (= view-mode :plan))]
+        allow-spend (= view-mode :budget)
+        reset-possible (> (get-in item [:spent :amount]) 0)]
     [:> ui/Grid.Row
      {:style {:margin-top "-0.1em"}}
      [:> ui/Grid.Column
@@ -189,10 +193,10 @@
                [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
                (when allow-spend
                  [pink-button "Spend"
-                  #(re-frame/dispatch [::events/spending item])]
-                 (when (> (get-in item [:spent :amount]) 0)
-                   [pink-button "Reset"
-                    #(re-frame/dispatch [::events/toggle-reset-item])]))])]]))
+                  #(re-frame/dispatch [::events/spending item])])
+               (when (and allow-spend reset-possible)
+                 [pink-button "Reset"
+                  #(re-frame/dispatch [::events/toggle-reset-item])])])]]))
 
 (defn budget-item-row
   [item selected-item-id spending-item-id edit-item-id reset-item]
@@ -226,6 +230,7 @@
       [:div                             ; left of item row
        {:on-click (if (and selected (or spending editing)) #()
                       #(re-frame/dispatch [::events/select-item item]))
+        :id (str "budget-item-" item-id)
         :style {:border-top budget-item-border-style
                 :border-left (str "3px solid " (colour :css))
                 :padding "0.4em"}}
@@ -238,7 +243,10 @@
         [:> ui/Grid.Row
          {:style {:padding 0}}
          [:> ui/Grid.Column
-          {:text-align "left"}
+          {:text-align "left"
+           :style (if planning
+                    {:min-height "1em"}
+                    {})}
           (when (not planning)
             [:> ui/Progress
              {:size "tiny"
@@ -291,6 +299,7 @@
        [:> ui/Input
         {:label "Name"
          :auto-focus true
+         :id "item-name-input"
          :error (some? name-error)
          :name "add-item-name"
          :default-value ""
@@ -382,17 +391,42 @@
 
 (defn budget-panel
   [budget]
-  [:> ui/Grid
-   [:> ui/Grid.Row
-    {:style {:padding-top 0}}
-    (budget-list-panel budget)]
-   [:> ui/Grid.Row
-    {:style {:padding-top 0}}
-    [:> ui/Grid.Column
-     {:width 1}]
-    [:> ui/Grid.Column
-     {:width 13}
-     (budget-control-panel budget)]]])
+  (let [view-mode @(re-frame/subscribe [::subs/view-mode])
+        total (budget/sum-limits budget)
+        spend (budget/sum-spents budget)
+        over-spend (if (< total spend)
+                     (.abs js/Math (- total spend))
+                     0)
+        over-spent (> over-spend 0)
+        over-spend (/ over-spend 100)
+        total (/ total 100)]
+    [:> ui/Grid
+     (when (= view-mode :budget)
+       [:> ui/Grid.Row
+        {:centered true}
+        [:> ui/Grid.Column
+         {:width 14}
+         [:> ui/Card
+          [:> ui/Grid
+           [:> ui/Grid.Row
+            {:centered true}
+            [:> ui/Grid.Column
+             {:width 6}
+             [:h5 (currency-str total) " Total"]]
+            [:> ui/Grid.Column
+             {:width 6
+              :style (if over-spent {:color "red"} {})}
+             [:h5 (currency-str over-spend) " Over-spend"]]]]]]])
+     [:> ui/Grid.Row
+      {:style {:padding-top 0}}
+      (budget-list-panel budget)]
+     [:> ui/Grid.Row
+      {:style {:padding-top 0}}
+      [:> ui/Grid.Column
+       {:width 1}]
+      [:> ui/Grid.Column
+       {:width 13}
+       (budget-control-panel budget)]]]))
 
 (defn adjust-income-panel
   [income]
@@ -403,6 +437,7 @@
       [:> ui/Grid.Column
        [:> ui/Input
         {:label "Income"
+         :id "income-input"
          :on-change #(update-amount
                       %
                       ::events/set-income
@@ -476,8 +511,11 @@
          [:> ui/Grid.Column
           {:width 14}
           [:> ui/Tab
-           {:panes [{:menuItem "Spend"}
-                    {:menuItem "Plan"}]
+           {:panes [{:menuItem "Budget"}
+                    {:menuItem "Bills"}]
+            :defaultActiveIndex (cond
+                                  (= view-mode :budget) 0
+                                  (= view-mode :plan) 1)
             :onTabChange #(let [index (.-activeIndex %2)]
                             (cond
                               (= index 0) (re-frame/dispatch [::events/set-view-mode :budget])

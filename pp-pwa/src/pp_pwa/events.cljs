@@ -2,6 +2,7 @@
   (:require
    [cljs.spec.alpha :as s]
    [expound.alpha :as ex]
+   [reagent.core :as reagent]
    [re-frame.core :as re-frame]
    [pp-pwa.budget :as budget]
    [pp-pwa.db :as db]
@@ -39,12 +40,29 @@
   [db [_ items]]
   (assoc-in db [:plan :budget] items)))
 
+(defn scroll-to-id
+  [id]
+  (-> js/document
+      (.getElementById id)
+      (.scrollIntoView true)))
+
+(defn focus
+  [id]
+  (-> js/document
+      (.getElementById id)
+      (.focus)))
+
 (re-frame/reg-event-db
  ::toggle-adding-item
  (fn-traced
   [db _]
   (let [default-name ""
         default-amount 0]
+    (when (not (:adding-item db)) ; scroll to the add item controls
+      (reagent/after-render
+       #(do
+          (scroll-to-id "item-name-input")
+          (focus "item-name-input"))))
     (-> db
         (update :adding-item not)
         (assoc-in [:new-item :name] default-name)
@@ -95,22 +113,20 @@
         item {:budget-item-name name
               :spent {:amount 0 :currency-code "€"}
               :limit {:amount amount :currency-code "€"}}
-        budget (cond
-                 (= view-mode :budget) (:budget db)
-                 (= view-mode :plan) (-> db :plan :budget))
-        update-in-keys (cond
-                         (= view-mode :budget) [:budget]
-                         (= view-mode :plan) [:plan :budget])
+        keys (cond
+               (= view-mode :budget) [:budget]
+               (= view-mode :plan) [:plan :budget])
         save-fn (cond
-                     (= view-mode :budget) storage/save-budget-item
-                     (= view-mode :plan) storage/save-plan-item)
+                  (= view-mode :budget) storage/save-budget-item
+                  (= view-mode :plan) storage/save-plan-item)
+        budget (get-in db keys)
         id-map {:budget-item-id (budget/next-item-id budget)}
         item (conj item id-map)]
     (assert ::specs/budget-item item)
     (let [updated (-> db
-                      (update-in update-in-keys conj item)
+                      (update-in keys conj item)
                       (update :adding-item not))]
-      (if (s/valid? ::specs/budget (:budget updated))
+      (if (s/valid? ::specs/budget (get-in updated keys))
         (do
           (save-fn item #(js/console.log "saved item"))
           updated)
@@ -123,6 +139,7 @@
  (fn-traced
   [db [_ item]]
   (let [item-id (:budget-item-id item)]
+    (reagent/after-render #(scroll-to-id (str "budget-item-" item-id)))
     (update db :selected-item-id #(if (= % item-id)
                                     false
                                     item-id)))))
@@ -137,6 +154,9 @@
  ::spending
  (fn-traced
   [db [_ item]]
+  (reagent/after-render
+   #(do (scroll-to-id (str "budget-item-" (:budget-item-id item)))
+        (focus "spend-amount-input")))
   (assoc-in db [:spending :item-id] (:budget-item-id item))))
 
 (re-frame/reg-event-db
@@ -261,11 +281,14 @@
 (re-frame/reg-event-db
  ::delete
  (fn-traced
-  [db [_ item-id]]
+  [db [_ item-id view-mode]]
   (let [item {:budget-item-id item-id :id item-id}
-        budget (:budget db)
+        keys (cond
+               (= view-mode :budget) [:budget]
+               (= view-mode :plan) [:plan :budget])
+        budget (get-in db keys)
         budget (vec (remove #(= item-id (:budget-item-id %)) budget))
-        updated (assoc db :budget  budget)]
+        updated (assoc-in db keys budget)]
     (storage/delete-budget-item item #(js/console.log "Deleted item."))
     updated)))
 
@@ -361,5 +384,9 @@
         updated (-> db
                     (assoc-in [:plan :income] amount)
                     (update :income-adjustment not))]
+    (reagent/after-render
+     #(do
+        (scroll-to-id "income-input")
+        (focus "income-input")))
     (storage/save-plan-income amount #(js/console.log "Updated income."))
     updated)))

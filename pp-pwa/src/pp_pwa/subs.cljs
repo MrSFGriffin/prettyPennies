@@ -61,7 +61,10 @@
 (re-frame/reg-sub
  ::plan
  (fn [db]
-   (:plan db)))
+   (let [plan (:plan db)
+         budget (:budget plan)
+         sorted-budget (sort-by #(get-in % [:limit :amount]) > budget)]
+     (assoc plan :budget sorted-budget))))
 
 (re-frame/reg-sub
  ::coloured-plan
