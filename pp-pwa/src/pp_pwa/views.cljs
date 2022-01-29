@@ -412,11 +412,11 @@
             {:centered true}
             [:> ui/Grid.Column
              {:width 6}
-             [:h5 (currency-str total) " Total"]]
+             [:h5 (currency-str total) [:p "Total"]]]
             [:> ui/Grid.Column
              {:width 6
               :style (if over-spent {:color "red"} {})}
-             [:h5 (currency-str over-spend) " Over-spend"]]]]]]])
+             [:h5 (currency-str over-spend) [:p "Over"]]]]]]]])
      [:> ui/Grid.Row
       {:style {:padding-top 0}}
       (budget-list-panel budget)]
