@@ -482,16 +482,16 @@
            {:centered true}
            [:> ui/Grid.Column
             {:width 5}
-            [:h5 (currency-str income) " Income"]]
+            [:h5 (currency-str income) [:p "Income"]]]
            [:> ui/Grid.Column
             {:width 5}
-            [:h5 (currency-str outgoing) " Outgoing"]]
+            [:h5 (currency-str outgoing) [:p "Outgoing"]]]
            [:> ui/Grid.Column
             {:width 5
              :text-align "left"}
             [:h5
              {:style {:color (if minus "red" "#737588")}}
-             (currency-str balance) " Balance"]]]
+             (currency-str balance) [:p "Balance"]]]]
           (when adjusting-income
             [:> ui/Grid.Row
              [:> ui/Grid.Column
