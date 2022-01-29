@@ -418,7 +418,10 @@
               :style (if over-spent {:color "red"} {})}
              [:h5 (currency-str over-spend) [:p "Over"]]]]]]]])
      [:> ui/Grid.Row
-      {:style {:padding-top 0}}
+      {:style {:max-height "18em"
+               :padding-top 0
+               :overflow-x "hidden"
+               :overflow-y "scroll"}}
       (budget-list-panel budget)]
      [:> ui/Grid.Row
       {:style {:padding-top 0}}
