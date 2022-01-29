@@ -418,11 +418,13 @@
               :style (if over-spent {:color "red"} {})}
              [:h5 (currency-str over-spend) [:p "Over"]]]]]]]])
      [:> ui/Grid.Row
-      {:style {:max-height "18em"
-               :padding-top 0
-               :overflow-x "hidden"
-               :overflow-y "scroll"}}
-      (budget-list-panel budget)]
+      {:style {:padding-top 0}}
+      [:div
+       {:style {:height "17em"
+                :max-height "17em"
+                :overflow-x "hidden"
+                :overflow-y "scroll"}}
+       (budget-list-panel budget)]]
      [:> ui/Grid.Row
       {:style {:padding-top 0}}
       [:> ui/Grid.Column
@@ -499,36 +501,34 @@
               [adjust-income-panel income]]])]]]]]
      [budget-panel (:budget plan)]]))
 
-
 (defn money-panel [budget plan view-mode]
-  ;{:pre [(s/valid? ::specs/budget budget)]}
-  (if (not (s/valid? ::specs/budget budget))
-    (js/console.log "invalid budget in money-panel: " (clj->js budget) ", explanation: " (s/explain ::specs/budget budget))
-    (let [name (re-frame/subscribe [::subs/name])]
-      [:> ui/Card
+  {:pre [(s/valid? ::specs/budget budget)]}
+  (let [name (re-frame/subscribe [::subs/name])]
+    [:> ui/Card
+     {:centered true
+      :style {:height "35.5em"}}
+     [:h1 {:style {:margin "0.3em 0 0.5em 0"}} @name]
+     [:> ui/Grid
+      [:> ui/Grid.Row
        {:centered true}
-       [:h1 {:style {:margin "0.3em 0 0.5em 0"}} @name]
-       [:> ui/Grid
-        [:> ui/Grid.Row
-         {:centered true}
-         [:> ui/Grid.Column
-          {:width 14}
-          [:> ui/Tab
-           {:panes [{:menuItem "Budget"}
-                    {:menuItem "Bills"}]
-            :defaultActiveIndex (cond
-                                  (= view-mode :budget) 0
-                                  (= view-mode :plan) 1)
-            :onTabChange #(let [index (.-activeIndex %2)]
-                            (cond
-                              (= index 0) (re-frame/dispatch [::events/set-view-mode :budget])
-                              (= index 1) (re-frame/dispatch [::events/set-view-mode :plan])))}]]]
-        [:> ui/Grid.Row
-         {:style {:margin-top "-1em"}}
-         [:> ui/Grid.Column
-          (cond
-            (= view-mode :budget) [budget-panel budget]
-            (= view-mode :plan) [plan-panel plan])]]]])))
+       [:> ui/Grid.Column
+        {:width 14}
+        [:> ui/Tab
+         {:panes [{:menuItem "Budget"}
+                  {:menuItem "Bills"}]
+          :defaultActiveIndex (cond
+                                (= view-mode :budget) 0
+                                (= view-mode :plan) 1)
+          :onTabChange #(let [index (.-activeIndex %2)]
+                          (cond
+                            (= index 0) (re-frame/dispatch [::events/set-view-mode :budget])
+                            (= index 1) (re-frame/dispatch [::events/set-view-mode :plan])))}]]]
+      [:> ui/Grid.Row
+       {:style {:margin-top "-1em"}}
+       [:> ui/Grid.Column
+        (cond
+          (= view-mode :budget) [budget-panel budget]
+          (= view-mode :plan) [plan-panel plan])]]]]))
 
 (defn home-panel []
   (let [loading @(re-frame/subscribe [::subs/loading])
