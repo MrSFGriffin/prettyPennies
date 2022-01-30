@@ -309,8 +309,8 @@
      [:> ui/Grid.Row
       {:id (str "budget-item-" item-id)
        :style {:padding-bottom 0}}
-      [:> ui/Grid.Column {:style {:border-right item-border
-                                  :height "79%"}
+      [:> ui/Grid.Column {:style (merge {:border-right item-border}
+                                        (if selected {} {:height "79%"}))
                           :width 2}]
       [:> ui/Grid.Column
        {:on-click #(re-frame/dispatch [::events/select-item item])
