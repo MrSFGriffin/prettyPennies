@@ -658,7 +658,8 @@
 (defn budget-bottom-menu-panel
   []
   (let [adding-item @(re-frame/subscribe [::subs/adding-item])
-        resetting-all @(re-frame/subscribe [::subs/resetting-all])]
+        resetting-all @(re-frame/subscribe [::subs/resetting-all])
+        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))]
     [:> ui/Card
      {:centered true}
      [:> ui/Menu
@@ -671,22 +672,21 @@
        "Add"]
       [:> ui/Menu.Item
        [:> ui/Icon
-        {:disabled resetting-all
+        {:disabled (or resetting-all planning)
          :on-click #(re-frame/dispatch [::events/toggle-resetting-all])
          :name "undo"}]
        "Reset All"]
       [:> ui/Menu.Item
+       {:disabled true}
        [:> ui/Icon
         {:name "numbered list"}]
        "Transactions"]]]))
 
 (defn home-panel []
   (let [loading @(re-frame/subscribe [::subs/loading])
-        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
-        view-port-height (.-innerHeight js/window)]
+        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))]
     [:> ui/Grid
      {:container true
-       ;:class (styles/full-height)
       :style {:margin-top "-0.4em"
               :height "74%"}
       :text-align "center"
