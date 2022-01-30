@@ -14,7 +14,10 @@
   [id]
   (-> js/document
       (.getElementById id)
-      (.scrollIntoView true)))
+      (.scrollIntoView true))
+  (-> js/document
+      (.body)
+      (.scrollTo 0 0)))
 
 (defn goto-selected
   [db]
