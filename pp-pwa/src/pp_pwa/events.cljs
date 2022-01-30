@@ -10,6 +10,24 @@
    [pp-pwa.storage :as storage]
    [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
+(defn scroll-to-id
+  [id]
+  (-> js/document
+      (.getElementById id)
+      (.scrollIntoView true)))
+
+(defn goto-selected
+  [db]
+  (let [item-id (:selected-item-id db)]
+    (when item-id
+      (reagent/after-render #(scroll-to-id (str "budget-item-" item-id))))))
+
+(defn focus
+  [id]
+  (-> js/document
+      (.getElementById id)
+      (.focus)))
+
 (re-frame/reg-event-db
  ::initialize-db
  (fn-traced
@@ -17,9 +35,15 @@
   db/default-db))
 
 (re-frame/reg-event-db
+ ::set-budget-data-view
+ (fn-traced
+  [db [_ view]]
+  (assoc db :budget-data-view view)))
+
+(re-frame/reg-event-db
  ::toggle-loading
  (fn-traced
-  [db [_ budget]]
+  [db [_ _]]
   (update db :loading not)))
 
 (re-frame/reg-event-db
@@ -40,22 +64,12 @@
   [db [_ items]]
   (assoc-in db [:plan :budget] items)))
 
-(defn scroll-to-id
-  [id]
-  (-> js/document
-      (.getElementById id)
-      (.scrollIntoView true)))
-
-(defn focus
-  [id]
-  (-> js/document
-      (.getElementById id)
-      (.focus)))
-
 (re-frame/reg-event-db
  ::toggle-adding-item
  (fn-traced
   [db _]
+  (when (:adding-item db)
+    (goto-selected db))
   (let [default-name ""
         default-amount 0]
     (when (not (:adding-item db)) ; scroll to the add item controls
@@ -108,6 +122,7 @@
  ::add-item
  (fn-traced
   [db [_ view-mode]]
+  (goto-selected db)
   (let [name (get-in db [:new-item :name])
         amount (get-in db [:new-item :amount])
         item {:budget-item-name name
@@ -243,7 +258,6 @@
  ::edit
  (fn-traced
   [db [_ _ view-mode]]
-  (js/console.log "view-mode = " (clj->js view-mode))
   (let [item-id (get-in db [:edit-item :item-id])
         name (get-in db [:edit-item :name])
         amt (get-in db [:edit-item :amount])
@@ -296,12 +310,15 @@
  ::toggle-resetting-all
  (fn-traced
   [db [_ _]]
+  (when (:resetting-all db)
+    (goto-selected db))
   (update db :resetting-all not)))
 
 (re-frame/reg-event-db
  ::reset-all-items
  (fn-traced
   [db [_ _]]
+  (goto-selected db)
   (let [updated (update db :budget budget/reset-all-items)]
     (if (s/valid? ::specs/budget (:budget db))
       (let [updated (update updated :resetting-all not)

@@ -16,6 +16,11 @@
    (:view-mode db)))
 
 (re-frame/reg-sub
+ ::budget-data-view
+ (fn [db _]
+   (:budget-data-view db)))
+
+(re-frame/reg-sub
  ::active-panel
  (fn [db _]
    (:active-panel db)))

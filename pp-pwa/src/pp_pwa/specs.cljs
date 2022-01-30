@@ -63,6 +63,24 @@
 (s/def ::income ::amount)
 (s/def ::plan (s/keys :req-un [::income ::budget]))
 
+(s/def ::type string?)
+(s/def ::step number?)
+(s/def ::min number?)
+(s/def ::on-change fn?)
+(s/def ::label string?)
+(s/def ::default-value #(or (string? %) (number? %)))
+(s/def ::auto-focus boolean?)
+(s/def ::input-options (s/keys :req-un []
+                               :opt-un [::auto-focus
+                                        ::default-value
+                                        ::label
+                                        ::min
+                                        ::on-change
+                                        ::step
+                                        ::type]))
+(s/def ::input-panel-options (s/keys :req-un [::error-sub]
+                                     :opt-un [::input-options]))
+
 (defn humanise-errors
   "Gives human friendly error messages for budget spec failures."
   [budget]
