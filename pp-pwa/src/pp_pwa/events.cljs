@@ -78,6 +78,7 @@
           (scroll-to-id "item-name-input")
           (focus "item-name-input"))))
     (-> db
+        (assoc :resetting-all nil)
         (update :adding-item not)
         (assoc-in [:new-item :name] default-name)
         (assoc-in [:new-item :name-error]
@@ -312,7 +313,9 @@
   [db [_ _]]
   (when (:resetting-all db)
     (goto-selected db))
-  (update db :resetting-all not)))
+  (-> db
+      (update :resetting-all not)
+      (assoc :adding-item nil))))
 
 (re-frame/reg-event-db
  ::reset-all-items
