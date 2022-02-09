@@ -25,7 +25,6 @@
     true
     (apply distinct? (mapv :budget-item-name budget))))
 
-
 (s/def ::colour-name
   (s/with-gen
     string?
@@ -62,6 +61,16 @@
                        distinct-budget-item-names?))
 (s/def ::income ::amount)
 (s/def ::plan (s/keys :req-un [::income ::budget]))
+
+;; {:date {:date "" :time "" :timezone {:utc-offset :name}}
+;;  :budget-item {}
+;;  :payment}
+
+;; (s/def ::date )
+;; (s/def ::transaction (s/keys :req-un [::date
+;;                                       ::budget-item
+;;                                       ::payment]))
+;; (s/def ::transactions (s/coll-of ::transaction))
 
 (s/def ::type string?)
 (s/def ::step number?)

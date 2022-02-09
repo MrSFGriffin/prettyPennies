@@ -468,8 +468,9 @@
 
 (defn budget-data-table
   "Table of budget data. Outermost element should is a ui/Grid.Column"
-  [budget options]
-  (let [total (budget/sum-limits budget)
+  [options]
+  (let [budget @(re-frame/subscribe [::subs/coloured-budget])
+        total (budget/sum-limits budget)
         spend (budget/sum-spents budget)
         over-spend (if (< total spend)
                      (.abs js/Math (- total spend))
@@ -479,7 +480,8 @@
         over-spend (/ over-spend 100)]
     [:> ui/Card
      {:centered true
-      :style {:padding-top "1em"
+      :style {:margin-bottom "-2em"
+              :padding-top "1em"
               :padding-left "1em"
               :padding-bottom "2em"}}
      [:> ui/Grid
@@ -627,6 +629,13 @@
               :overflow "hidden scroll"}}
      [:> ui/Grid
       [:> ui/Grid.Row]
+      [:> ui/Grid.Row
+       {:centered true}
+       [:> ui/Grid.Column
+        {:width 15
+         :style {:padding-bottom 0}}
+        (if planning [plan-data-table] [budget-data-table])]]
+      [:> ui/Grid.Row]
       (when (not editing)
         [:> ui/Grid.Row
          {:centered true
@@ -688,13 +697,15 @@
     [:> ui/Grid
      {:container true
       :style {:margin-top "-0.4em"
-              :height "74%"}
+              :height "70%"}
       :text-align "center"
       :vertical-align "middle"}
-     [:> ui/Grid.Row
-      [:> ui/Grid.Column
-       {:width 15}
-       (if planning [plan-data-table] [budget-data-table])]]
+     (comment  (if (not loading)
+                 [:> ui/Grid.Row
+                  [:> ui/Grid.Column
+                   {:width 15}
+                   (if planning [plan-data-table] [budget-data-table])]]))
+     [:> ui/Grid.Row]
      [:> ui/Grid.Row
       {:style {:height "100%"
                :padding-top 0}}
@@ -702,8 +713,8 @@
        {:style (if loading
                  {:background-color "white"
                   :min-height "20%"
-                  :height "40%"
-                  :max-width "40%"}
+                  :height "60%"
+                  :width "80%"}
                  {:height "100%"
                   :overflow "hidden hidden"})} ; overflow hidden hidden
        (if loading

@@ -3,6 +3,7 @@
 (def default-db
   {:name "Money"
    :budget []
+   :transactions []
    :view-mode :budget
    :budget-data-view :table
    :budget-view {:income 0 :budget []}
