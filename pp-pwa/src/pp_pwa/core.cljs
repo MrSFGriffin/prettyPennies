@@ -44,7 +44,10 @@
         (storage/get-plan-items
          (fn [items]
            (re-frame/dispatch [::events/set-plan-items items])
-           (re-frame/dispatch [::events/toggle-loading]))))))))
+           (storage/get-transaction-map
+            (fn [transaction-map]
+              (re-frame/dispatch [::events/set-transaction-map transaction-map])
+              (re-frame/dispatch [::events/toggle-loading]))))))))))
 
 (defn init []
   (routes/start!)

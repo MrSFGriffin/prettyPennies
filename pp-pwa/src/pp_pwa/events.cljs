@@ -8,6 +8,7 @@
    [pp-pwa.db :as db]
    [pp-pwa.specs :as specs]
    [pp-pwa.storage :as storage]
+   [pp-pwa.transactions :as transactions]
    [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
 (defn scroll-to-id
@@ -16,7 +17,7 @@
       (.getElementById id)
       (.scrollIntoView true))
   (-> js/document
-      (.body)
+      (.-body)
       (.scrollTo 0 0)))
 
 (defn goto-selected
@@ -169,12 +170,21 @@
   [db [_ _]]
    (assoc db :selected-item-id nil)))
 
+;; (re-frame/reg-event-db
+;;  ::spending
+;;  (fn-traced
+;;   [db [_ _]]
+;;   (reagent/after-render
+;;    #(do (scroll-to-id "spend-amount-input")
+;;         (focus "spend-amount-input")))
+;;   (assoc db :spending {})))
+
 (re-frame/reg-event-db
  ::spending
  (fn-traced
   [db [_ item]]
   (reagent/after-render
-   #(do (scroll-to-id (str "budget-item-" (:budget-item-id item)))
+   #(do (scroll-to-id "budget-spending-panel-header")
         (focus "spend-amount-input")))
   (assoc-in db [:spending :item-id] (:budget-item-id item))))
 
@@ -199,11 +209,26 @@
   (assoc-in db [:spending :amount-error] msg)))
 
 (re-frame/reg-event-db
+ ::set-spending-note
+ (fn-traced
+  [db [_ note]]
+  (assert string? note)
+  (assoc-in db [:spending :note] note)))
+
+(re-frame/reg-event-db
+ ::set-spending-note-error
+ (fn-traced
+  [db [_ msg]]
+  (assert string? msg)
+  (assoc-in db [:spending :note-error] msg)))
+
+(re-frame/reg-event-db
  ::spend
  (fn-traced
   [db [_ _]]
   (let [item-id (get-in db [:spending :item-id])
         amount (get-in db [:spending :amount])
+        note (get-in db [:spending :note])
         item {:budget-item-id item-id}
         updated (-> db
                     (update :budget budget/spend item amount)
@@ -212,8 +237,32 @@
                   :budget
                   (filter #(= item-id (:budget-item-id %)))
                   first)]
+    (re-frame/dispatch [::add-transaction item amount note])
     (storage/save-budget-item item #(js/console.log "Item updated."))
-      updated)))
+    updated)))
+
+(re-frame/reg-event-db
+ ::set-transaction-map
+ (fn-traced
+  [db [_ transaction-map]]
+  (assoc db :transactions transaction-map)))
+
+(re-frame/reg-event-db
+ ::add-transaction
+ (fn-traced
+  [db [_ item amount note]]
+  (let [name (:budget-item-name item)
+        currency-value {:amount amount
+                        :currency-code (-> item :limit :currency-code)}
+        transactions (:transactions db)
+        transactions (transactions/add-transaction transactions
+                                                   name
+                                                   currency-value
+                                                   note)
+        updated (assoc db :transactions transactions)]
+    (storage/save-transaction-map transactions
+                                  #(js/console.log "Transactions saved."))
+    updated)))
 
 (re-frame/reg-event-db
  ::editing
@@ -326,11 +375,11 @@
   [db [_ _]]
   (goto-selected db)
   (let [updated (update db :budget budget/reset-all-items)]
-    (if (s/valid? ::specs/budget (:budget db))
+    (if (s/valid? ::specs/budget (:budget updated))
       (let [updated (update updated :resetting-all not)
             budget (:budget updated)
             msg-fn #(js/console.log "Item updated.")]
-        (map #(storage/save-budget-item % msg-fn) budget)
+        (run! #(storage/save-budget-item % msg-fn) budget)
         updated)
       db))))
 
@@ -366,6 +415,12 @@
  (fn-traced
   [{:keys [db]} [_ active-panel]]
   {:db (assoc db :active-panel active-panel)}))
+
+(re-frame/reg-event-db
+ ::set-view
+ (fn-traced
+  [db [_ view]]
+  (assoc db :view view)))
 
 (re-frame/reg-event-db
  ::set-view-mode

@@ -21,9 +21,10 @@
   (set! (.-onerror request) error))
 
 (def db-name "pretty-order")
-(def db-version 18)
+(def db-version 20)
 
 (def budget-store-name "budget")
+(def transaction-store-name "transaction")
 (def plan-income-store-name "plan-income")
 (def plan-items-store-name "plan-items")
 (def budget-view-store-name "budget-view")
@@ -32,7 +33,8 @@
 (def store-names
   [budget-store-name
    plan-income-store-name
-   plan-items-store-name])
+   plan-items-store-name
+   transaction-store-name])
 
 (def defunct-store-names
   [budget-view-store-name
@@ -81,14 +83,21 @@
            request (.put store (clj->js item))]
        (set-error-handler request)
        (set! (.-onsuccess request)
-             (fn [e] (success-fn)))))))
+             (fn [_e] (success-fn)))))))
+
+(defn save-transaction-map
+  ([trans-map success-fn]
+   (save-transaction-map trans-map success-fn transaction-store-name))
+  ([trans-map success-fn store-name]
+   (save-map trans-map success-fn store-name)))
 
 (defn save-budget-item
   "Saves a budget-item from persistent storage."
   ([item success-fn] (save-budget-item item success-fn budget-store-name))
   ([item success-fn store-name]
    (let [item (assoc item :id (:budget-item-id item))]
-     (save-map item success-fn store-name))))
+     (when (not (:read-only item))
+       (save-map item success-fn store-name)))))
 
 (defn save-plan-income
   "Saves an income to persistent storage."
@@ -138,6 +147,15 @@
                [e]
                (success-fn
                 (js->clj (.-result request) :keywordize-keys true))))))))
+
+(defn get-transaction-map
+  ([success-fn] (get-transaction-map success-fn transaction-store-name))
+  ([success-fn store-name]
+   (let [wrapped-success-fn (fn [transaction-map]
+                              (success-fn (or
+                                           (first transaction-map)
+                                           {:id 1})))]
+     (get-maps wrapped-success-fn store-name))))
 
 (defn get-budget-items
   "Retrieves budget items from persistent storage and passes them to success-fn."

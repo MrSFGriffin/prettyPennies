@@ -36,16 +36,16 @@
      :onClick on-click}
     label]))
 
-(defn update-item-name
-  "Updates an item name."
-  [event set-item-name-key set-item-name-error-key]
+(defn update-text-property
+  "Updates a text property."
+  [event set-property-key set-property-error-key]
   (let [value (-> event .-target .-value)]
     ; todo: move most of this to the set event
     (if (s/valid? ::specs/budget-item-name value)
       (do
-        (re-frame/dispatch [set-item-name-key value])
-        (re-frame/dispatch [set-item-name-error-key nil]))
-      (re-frame/dispatch [set-item-name-error-key "Name required."]))))
+        (re-frame/dispatch [set-property-key value])
+        (re-frame/dispatch [set-property-error-key nil]))
+      (re-frame/dispatch [set-property-error-key "Required."]))))
 
 (defn update-amount
   [event set-amount-key set-error-key]
@@ -129,7 +129,7 @@
                      {:auto-focus true
                       :default-value (:budget-item-name item)
                       :label "Name"
-                      :on-change #(update-item-name
+                      :on-change #(update-text-property
                                    %
                                    ::events/set-edit-item-name
                                    ::events/set-edit-item-name-error)}}]]]
@@ -186,23 +186,41 @@
 
 (defn budget-item-spend-panel
   [item]
-  (let [amount-error @(re-frame/subscribe [::subs/spending-amount-error])]
+  (let [amount-error @(re-frame/subscribe [::subs/spending-amount-error])
+        note-error @(re-frame/subscribe [::subs/spending-note-error])]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:style {:padding-bottom 0}}
       [:> ui/Grid.Column
        [:> ui/Input
-        {:label (get-in item [:spent :currency-code])
-         :id "spend-amount-input"
-         :step 0.01
-         :auto-focus true
-         :placeholder "amount spent"
-         :type "number"
-         :on-change #(update-spending-amount %)
+        {:auto-focus true
          :error (some? amount-error)
+         :fluid true
+         :id "spend-amount-input"
+         :on-change #(update-spending-amount %)
+         :label (get-in item [:spent :currency-code])
          :min 0
-         :style {:padding-bottom "0.5em"}}]]]
+         :placeholder "amount spent"
+         :step 0.01
+         :style {:padding-bottom "0.5em"}
+         :type "number"}]]]
      (when amount-error
+       [:> ui/Grid.Row
+        {:text-align "left"}
+        [:> ui/Grid.Column
+         [:> ui/Label amount-error]]])
+     [:> ui/Grid.Row
+      {:centered true}
+      [:> ui/Grid.Column
+       [:> ui/Input
+        {:id "spend-note"
+         :fluid true
+         :on-blur #(update-text-property
+                      %
+                      ::events/set-spending-note
+                      ::events/set-spending-note-error)
+         :label "Note"}]]]
+     (when note-error
        [:> ui/Grid.Row
         {:text-align "left"}
         [:> ui/Grid.Column
@@ -216,42 +234,80 @@
        {:width 6}
        [pink-button "Spend" #(re-frame/dispatch [::events/spend])]]]]))
 
+(defn budget-spend-panel
+  []
+  (let [budget-drop-down-items @(re-frame/subscribe
+                                 [::subs/budget-drop-down-items])
+        item-id @(re-frame/subscribe [::subs/spending-item-id])]
+    [:> ui/Grid
+     [:> ui/Grid.Row
+      {:centered true}
+      [:> ui/Grid.Column {:width 1}]
+      [:> ui/Grid.Column
+       {:width 14}
+       [:h4
+        {:id "budget-spending-panel-header"}
+        "Spend"]]]
+     [:> ui/Grid.Row
+      [:> ui/Grid.Column {:width 1}]
+      [:> ui/Grid.Column
+       {:width 13}
+       [:> ui/Dropdown
+        {:placeholder "Category"
+         :id "spending-category-selector"
+         :fluid true
+         :selection true
+         :onChange (fn [_e, data]
+                     (let [value (.-value data)]
+                       (re-frame/dispatch [::events/spending
+                                           {:budget-item-id value}])))
+         :options budget-drop-down-items
+         :value item-id}]]
+      [:> ui/Grid.Column {:width 1}]]
+     [:> ui/Grid.Row
+      {:centered true}
+      [:> ui/Grid.Column
+       {:width 13}
+       [budget-item-spend-panel]]]]))
+
 (defn budget-item-button-panel
   [item]
   (let [planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
-        reset-possible (and (> (get-in item [:spent :amount]) 0) (not planning))]
-    [:> ui/Grid
-     [:> ui/Grid.Row
-      {:style {:padding-top 0}}
-      (when (not planning)
+        reset-possible (and (> (get-in item [:spent :amount]) 0) (not planning))
+        writeable (-> item :read-only not)]
+    (when writeable
+      [:> ui/Grid
+       [:> ui/Grid.Row
+        {:style {:padding-top 0}}
+        (when (not planning)
+          [:> ui/Grid.Column
+           {:style {:padding-left "0.3em"}
+            :width 6}
+           [pink-button "Spend" #(re-frame/dispatch [::events/spending item])]])
+        (when (not planning)
+          [:> ui/Grid.Column {:width 1}])
         [:> ui/Grid.Column
-         {:style {:padding-left "0.3em"}
-          :width 6}
-         [pink-button "Spend" #(re-frame/dispatch [::events/spending item])]])
-      (when (not planning)
-        [:> ui/Grid.Column {:width 1}])
-      [:> ui/Grid.Column
-       {:style (if planning {:padding-left "0.3em"} {})
-        :vertical-align (if planning "top" "bottom")
-        :width 4}
-       (if planning
-         [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
-         [:a {:on-click #(re-frame/dispatch [::events/editing item])} "Edit"])]
-      (when reset-possible
-        [:> ui/Grid.Column
-         {:vertical-align (if planning "top" "bottom")
-          :width 3}
-         [:a
-          {:on-click #(re-frame/dispatch [::events/toggle-reset-item])}
-          "Reset"]])]]))
+         {:style (if planning {:padding-left "0.3em"} {})
+          :vertical-align (if planning "top" "bottom")
+          :width 4}
+         (if planning
+           [pink-button "Edit" #(re-frame/dispatch [::events/editing item])]
+           [:a {:on-click #(re-frame/dispatch [::events/editing item])} "Edit"])]
+        (when reset-possible
+          [:> ui/Grid.Column
+           {:vertical-align (if planning "top" "bottom")
+            :width 3}
+           [:a
+            {:on-click #(re-frame/dispatch [::events/toggle-reset-item])}
+            "Reset"]])]])))
 
 (defn budget-item-amount-panel
   [item]
   (let [raw-limit (-> item :limit :amount)
         limit (/ raw-limit 100)
         raw-spent (-> item :spent :amount)
-        left (/ (- raw-limit raw-spent) 100)
-        negative (< left 0)]
+        spent (/ raw-spent 100)
+        negative (> spent limit)]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:style {:padding-bottom "0.3em"}}
@@ -259,7 +315,7 @@
        {:style {:font-size "1.3em"
                 :color (if negative "red" "black")}
         :text-align "right"}
-        (currency-str left)]]
+        (currency-str spent)]]
      [:> ui/Grid.Row
       {:style {:padding-top 0}}
       [:> ui/Grid.Column
@@ -294,17 +350,16 @@
 (defn budget-item-panel
   [item]
   (let [selected-item-id @(re-frame/subscribe [::subs/selected-item-id])
-        spending-item-id @(re-frame/subscribe [::subs/spending-item-id])
         edit-item-id @(re-frame/subscribe [::subs/edit-item-id])
         reset-item @(re-frame/subscribe [::subs/reset-item])
         item-id (:budget-item-id item)
-        spending (= item-id spending-item-id)
         editing (= item-id edit-item-id)
         resetting reset-item
         selected (= item-id selected-item-id)
         colour (item :colour)
         item-border (str "3px solid " (colour :css colour))
-        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))]
+        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
+        writeable (-> item :read-only not)]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:id (str "budget-item-" item-id)
@@ -326,7 +381,7 @@
         :style {:border-top budget-item-border-style
                 :padding "0.4em"}}
        [budget-item-amount-panel item]]]
-     (when selected
+     (when (and selected writeable)
        [:> ui/Grid.Row
         {:style {:padding-top 0
                  :padding-bottom 0}}
@@ -335,7 +390,7 @@
                   :min-height "1em"}
           :width 2}]
         [:> ui/Grid.Column {:width 12}]])
-     (when selected
+     (when (and selected writeable)
        [:> ui/Grid.Row
         {:style {:padding-top 0}}
         [:> ui/Grid.Column
@@ -345,7 +400,6 @@
          {:style {:padding-bottom "0.5em"}
           :width 12}
          (cond
-           spending [budget-item-spend-panel item]
            resetting [budget-item-reset-panel item]
            editing [budget-item-edit-panel item]
            :else [budget-item-button-panel item])]])]))
@@ -376,7 +430,7 @@
          :error (some? name-error)
          :name "add-item-name"
          :default-value ""
-         :on-change #(update-item-name
+         :on-change #(update-text-property
                       %
                       ::events/set-new-item-name
                       ::events/set-new-item-name-error)
@@ -510,7 +564,7 @@
             (currency-str over-spend)]]]
          [:> ui/Grid.Row
           {:style {:padding-top 0}}
-          [:> ui/Grid.Column [:h5 "Over-spent"]]]]]]
+          [:> ui/Grid.Column [:h5 "Over"]]]]]]
       (comment
         [:> ui/Grid.Row
          [:> ui/Grid.Column
@@ -566,7 +620,7 @@
     [:> ui/Card
      {:centered true
       :style {:padding-top "1em"
-              :padding-left "1em"
+              :padding-left "0em"
               :padding-bottom "1em"}}
      [:> ui/Grid
       [:> ui/Grid.Row
@@ -613,66 +667,20 @@
             {:style balance-style}
             "Balance"]]]]]]]]))
 
-(defn money-panel []
-  (let [planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
-        data-key (if planning ::subs/coloured-plan ::subs/coloured-budget)
-        data @(re-frame/subscribe [data-key])
-        budget (if planning (:budget data) data)
-        adding-item @(re-frame/subscribe [::subs/adding-item])
-        resetting-all @(re-frame/subscribe [::subs/resetting-all])
-        adjusting-income @(re-frame/subscribe [::subs/adjusting-income])
-        editing (or adding-item resetting-all adjusting-income)]
-    (assert ::specs/budget budget)
-    [:> ui/Card
-     {:centered true
-      :style {:height "100%"
-              :overflow "hidden scroll"}}
-     [:> ui/Grid
-      [:> ui/Grid.Row]
-      [:> ui/Grid.Row
-       {:centered true}
-       [:> ui/Grid.Column
-        {:width 15
-         :style {:padding-bottom 0}}
-        (if planning [plan-data-table] [budget-data-table])]]
-      [:> ui/Grid.Row]
-      (when (not editing)
-        [:> ui/Grid.Row
-         {:centered true
-          :style {:padding-top 0}}
-         [:> ui/Grid.Column
-          {:width 14}
-          [:> ui/Tab
-           {:panes [{:menuItem "Budget"}
-                    {:menuItem "Bills"}]
-            :defaultActiveIndex (if planning 1 0)
-            :onTabChange
-            #(let [index (.-activeIndex %2)]
-               (cond
-                 (= index 0)
-                 (re-frame/dispatch [::events/set-view-mode :budget])
-                 (= index 1)
-                 (re-frame/dispatch [::events/set-view-mode :plan])))}]]])
-      [:> ui/Grid.Row
-       {:centered true}
-       [:> ui/Grid.Column
-        (cond
-          adding-item [add-item-panel]
-          resetting-all [reset-all-panel]
-          adjusting-income [adjust-income-panel]
-          :else [budget-list-panel budget])]]
-      [:> ui/Grid.Row
-       [:> ui/Grid.Column]]]]))
-
 (defn budget-bottom-menu-panel
   []
   (let [adding-item @(re-frame/subscribe [::subs/adding-item])
         resetting-all @(re-frame/subscribe [::subs/resetting-all])
-        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))]
+        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
+        view @(re-frame/subscribe [::subs/view])
+        any-transactions @(re-frame/subscribe [::subs/any-transactions])
+        transaction-view (= view :transaction)
+        money-view (= view :money)]
     [:> ui/Card
      {:centered true}
      [:> ui/Menu
       {:icon "labeled"
+       :style {:font-size "0.8em"}
        :widths 3}
       [:> ui/Menu.Item
        {:on-click #(re-frame/dispatch [::events/toggle-adding-item])
@@ -685,26 +693,211 @@
          :on-click #(re-frame/dispatch [::events/toggle-resetting-all])
          :name "undo"}]
        "Reset All"]
-      [:> ui/Menu.Item
-       {:disabled true}
-       [:> ui/Icon
-        {:name "numbered list"}]
-       "Transactions"]]]))
+      (when transaction-view
+        [:> ui/Menu.Item
+         {:disabled false
+          :on-click #(re-frame/dispatch
+                      [::events/set-view :money])}
+         [:> ui/Icon
+          {:name "numbered list"}]
+         "Budget"])
+      (when money-view
+        [:> ui/Menu.Item
+         {:on-click (if (not any-transactions)
+                      #()
+                      #(re-frame/dispatch [::events/set-view :transaction]))}
+         [:> ui/Icon
+          {:disabled (not any-transactions)
+           :name "numbered list"}]
+         "Transactions"])]]))
+
+(defn budget-panel []
+  (let [planning (= :plan @(re-frame/subscribe [::subs/view-mode]))
+        spending @(re-frame/subscribe [::subs/spending])
+        data-key (if planning ::subs/coloured-plan ::subs/coloured-budget)
+        data @(re-frame/subscribe [data-key])
+        budget (if planning (:budget data) data)
+        adding-item @(re-frame/subscribe [::subs/adding-item])
+        resetting-all @(re-frame/subscribe [::subs/resetting-all])
+        adjusting-income @(re-frame/subscribe [::subs/adjusting-income])
+        editing (or adding-item resetting-all adjusting-income spending)]
+    (assert ::specs/budget budget)
+    [:> ui/Grid
+     [:> ui/Grid.Row]
+     [:> ui/Grid.Row]
+     (when (not editing)
+       [:> ui/Grid.Row
+        {:centered true
+         :style {:padding-bottom "1em"
+                 :padding-top 0}}
+        [:> ui/Grid.Column
+         {:width 14}
+         [:> ui/Tab
+          {:panes [{:menuItem "Budget"}
+                   {:menuItem "Bills"}
+                   {:menuItem {:name "Debt" :disabled true}}]
+           :defaultActiveIndex (if planning 1 0)
+           :onTabChange
+           #(let [index (.-activeIndex %2)]
+              (cond
+                (= index 0)
+                (re-frame/dispatch [::events/set-view-mode :budget])
+                (= index 1)
+                (re-frame/dispatch [::events/set-view-mode :plan])))}]]])
+     (when planning
+       [:> ui/Grid.Row
+        {:centered true
+         :style {:padding-bottom "1em"}}
+        [:> ui/Grid.Column
+         {:width 14}
+         [plan-data-table]]])
+     [:> ui/Grid.Row
+      {:centered true}
+      [:> ui/Grid.Column
+       (cond
+         adding-item [add-item-panel]
+         resetting-all [reset-all-panel]
+         adjusting-income [adjust-income-panel]
+         spending [budget-spend-panel]
+         :else [budget-list-panel budget])]]
+     (when (not editing)
+       [:> ui/Grid.Row
+        {:centered true}
+        [:> ui/Grid.Column
+         {:width 15}
+         [budget-bottom-menu-panel]]])]))
+
+(defn transaction-item-panel [transaction]
+  [:> ui/Grid
+   [:> ui/Grid.Row
+    {:centered true}
+    [:> ui/Grid.Column
+     {:width 13}
+     [:> ui/Card
+      {:style {:padding-bottom "0.5em"
+               :padding-left "1em"
+               :padding-right "1em"
+               :padding-top "0.5em"}}
+      [:> ui/Grid
+       [:> ui/Grid.Row
+        {:style {:padding-bottom 0}}
+        [:> ui/Grid.Column
+         {:text-align "left"
+          :width 8}
+         [:h4 (:budget-item-name transaction)]]
+        [:> ui/Grid.Column
+         {:text-align "right"
+          :width 8}
+         [:h5 (currency-str (-> transaction :spent :amount))]]]
+       [:> ui/Grid.Row
+        {:style {:padding-top 0
+                 :padding-bottom 0}
+         :text-align "left"}
+        [:> ui/Grid.Column
+         {:width 16}
+         [:p (or (:note transaction) "")]]]
+       [:> ui/Grid.Row
+        {:text-align "right"}
+        [:> ui/Grid.Column
+         (-> transaction :datetime-info :datetime)]]]]]]])
+
+(defn transaction-list-panel []
+  (let [year @(re-frame/subscribe [::subs/selected-transaction-year])
+        years @(re-frame/subscribe [::subs/transaction-years])
+        year-options (map (fn [y]
+                            {:key y
+                             :text y
+                             :value y
+                             :active (= y year)})
+                          years)
+        month @(re-frame/subscribe [::subs/selected-transaction-month])
+        months @(re-frame/subscribe [::subs/transaction-months])
+        month-options (map (fn [m]
+                             {:key m
+                              :text m
+                              :value m
+                              :active (= m month)})
+                           months)
+        transactions @(re-frame/subscribe [::subs/selected-transactions])]
+    [:> ui/Grid
+     [:> ui/Grid.Row
+      {:centered true
+       :style {:padding-bottom 0}}
+      [:> ui/Grid.Column
+       {:width 8}
+       [:> ui/Dropdown
+        {:fluid true
+         :options month-options
+         :placeholder "Month"
+         :selection true
+         :value month}]]
+      [:> ui/Grid.Column
+       {:width 5}
+       [:> ui/Dropdown
+        {:fluid true
+         :options year-options
+         :placeholder "Year"
+         :selection true
+         :value year}]]]
+     [:> ui/Grid.Row
+      {:style {:padding-bottom 0
+               :padding-top 0}}
+      [:> ui/Grid.Column]]
+     (map (fn [i]
+            [:> ui/Grid.Row
+             {:style {:padding-bottom 0
+                      :padding-top "1em"}}
+             [:> ui/Grid.Column
+              [transaction-item-panel i]]])
+          transactions)]))
+
+(defn transaction-bottom-menu-panel []
+  [:> ui/Card
+   {:centered true}
+   [:> ui/Menu
+    {:icon "labeled"
+     :style {:font-size "0.8em"}
+     :widths 3}
+    [:> ui/Menu.Item
+     [:> ui/Icon
+      {:name "envelope"
+       :on-click #(re-frame/dispatch [::events/set-view :money])}]
+     "Envelopes"]]])
+
+(defn transaction-panel []
+  [:> ui/Grid
+   [:> ui/Grid.Row]
+   [:> ui/Grid.Row
+    [:> ui/Grid.Column
+     [:h1 "Transactions"]]]
+   [:> ui/Grid.Row
+    {:centered true}
+    [transaction-list-panel]]
+   [:> ui/Grid.Row
+    {:centered true}
+    [:> ui/Grid.Column
+     {:width 15}
+     [transaction-bottom-menu-panel]]]])
+
+(defn money-panel []
+  (let [view @(re-frame/subscribe [::subs/view])]
+    [:> ui/Card
+     {:centered true
+      :style {:height "100%"
+              :opacity "85%"
+              :overflow "hidden scroll"}}
+     (cond
+       (= view :transaction) [transaction-panel]
+       :else [budget-panel])]))
 
 (defn home-panel []
-  (let [loading @(re-frame/subscribe [::subs/loading])
-        planning (= :plan @(re-frame/subscribe [::subs/view-mode]))]
+  (let [loading @(re-frame/subscribe [::subs/loading])]
     [:> ui/Grid
      {:container true
       :style {:margin-top "-0.4em"
-              :height "70%"}
+              :height "94%"}
       :text-align "center"
       :vertical-align "middle"}
-     (comment  (if (not loading)
-                 [:> ui/Grid.Row
-                  [:> ui/Grid.Column
-                   {:width 15}
-                   (if planning [plan-data-table] [budget-data-table])]]))
      [:> ui/Grid.Row]
      [:> ui/Grid.Row
       {:style {:height "100%"
@@ -722,13 +915,7 @@
           {:active true
            :size "massive"}
           [:h1 "Loading"]]
-         [money-panel])]]
-     (when (not loading)
-       [:> ui/Grid.Row
-        {:centered true
-         :style {:padding 0}}
-        [:> ui/Grid.Column
-         [budget-bottom-menu-panel]]])]))
+         [money-panel])]]]))
 
 (defmethod routes/panels :home-panel [] [home-panel])
 

@@ -14,9 +14,10 @@
 (defglobal defaults
   [:body
    {:color               :red
-    :background-color    :white
+    :background-color    "#34dbeb"
     :background-image "url('/img/flower_small.webp') !important"
-    :background-size "cover !important"}
+    :background-size "cover !important"
+    :scroll-boundary-behavior "none"}
    :bar ])
 
 (defclass full-height [] {:height "100vh"})
