@@ -8,6 +8,7 @@
    [pp-pwa.db :as db]
    [pp-pwa.specs :as specs]
    [pp-pwa.storage :as storage]
+   [pp-pwa.subs :as subs]
    [pp-pwa.transactions :as transactions]
    [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
@@ -130,9 +131,6 @@
   (goto-selected db)
   (let [name (get-in db [:new-item :name])
         amount (get-in db [:new-item :amount])
-        item {:budget-item-name name
-              :spent {:amount 0 :currency-code "€"}
-              :limit {:amount amount :currency-code "€"}}
         keys (cond
                (= view-mode :budget) [:budget]
                (= view-mode :plan) [:plan :budget])
@@ -140,19 +138,20 @@
                   (= view-mode :budget) storage/save-budget-item
                   (= view-mode :plan) storage/save-plan-item)
         budget (get-in db keys)
-        id-map {:budget-item-id (budget/next-item-id budget)}
-        item (conj item id-map)]
+        item (budget/create-item budget name amount "€")]
     (assert ::specs/budget-item item)
     (let [updated (-> db
-                      (update-in keys conj item)
+                      (update-in keys #(conj % item))
                       (update :adding-item not))]
       (if (s/valid? ::specs/budget (get-in updated keys))
         (do
           (save-fn item #(js/console.log "saved item"))
           updated)
-        (assoc-in db
-                  [:new-item :name-error]
-                  "Duplicate item name"))))))
+        (do
+          (js/console.log "Invalid budget: " (clj->js (s/explain ::specs/budget (get-in updated keys))))
+          (assoc-in db
+                    [:new-item :name-error]
+                    "Invalid")))))))
 
 (re-frame/reg-event-db
  ::select-item
@@ -186,7 +185,9 @@
   (reagent/after-render
    #(do (scroll-to-id "budget-spending-panel-header")
         (focus "spend-amount-input")))
-  (assoc-in db [:spending :item-id] (:budget-item-id item))))
+  (assoc-in db [:spending :item-id] (:budget-item-id
+                                     (or item
+                                         (first (:budget db)))))))
 
 (re-frame/reg-event-db
  ::cancel-spending
@@ -222,6 +223,15 @@
   (assert string? msg)
   (assoc-in db [:spending :note-error] msg)))
 
+(defn reset-spending [db]
+  (let [item-id (or (get-in db [:spending :item-id])
+                    (first (:budget db)))
+        amount-input (.. js/document (getElementById "spend-amount-input"))
+        note-input (.. js/document (getElementById "spend-note-input"))]
+    (set! (.-value amount-input) "")
+    (set! (.-value note-input) "")
+    (assoc db :spending {:item-id item-id})))
+
 (re-frame/reg-event-db
  ::spend
  (fn-traced
@@ -232,36 +242,93 @@
         item {:budget-item-id item-id}
         updated (-> db
                     (update :budget budget/spend item amount)
-                    (assoc :spending nil))
+                    reset-spending)
         item (->> updated
                   :budget
                   (filter #(= item-id (:budget-item-id %)))
                   first)]
-    (re-frame/dispatch [::add-transaction item amount note])
-    (storage/save-budget-item item #(js/console.log "Item updated."))
-    updated)))
+    (if @(re-frame/subscribe [::subs/spend-is-valid])
+      (do
+        (re-frame/dispatch [::add-transaction item amount note])
+        (storage/save-budget-item item #(js/console.log "Item updated."))
+        updated)
+      db))))
 
 (re-frame/reg-event-db
- ::set-transaction-map
+ ::set-transaction-years
  (fn-traced
-  [db [_ transaction-map]]
-  (assoc db :transactions transaction-map)))
+  [db [_ years]]
+  (let [year (-> years first str (subs 1))
+        year-kw (-> year str keyword)]
+    (storage/get-transactions-of-year
+     (fn [transactions]
+       (re-frame/dispatch [::set-transactions-of-year year-kw transactions]))
+     year))
+  (assoc-in db [:transactions :years] years)))
 
 (re-frame/reg-event-db
  ::add-transaction
  (fn-traced
   [db [_ item amount note]]
-  (let [name (:budget-item-name item)
-        currency-value {:amount amount
+  (let [currency-value {:amount amount
                         :currency-code (-> item :limit :currency-code)}
         transactions (:transactions db)
-        transactions (transactions/add-transaction transactions
-                                                   name
-                                                   currency-value
-                                                   note)
+        {transactions :transactions
+         year-kw :year-kw} (transactions/add-transaction transactions
+                                                         item
+                                                         currency-value
+                                                         note)
         updated (assoc db :transactions transactions)]
-    (storage/save-transaction-map transactions
-                                  #(js/console.log "Transactions saved."))
+    (storage/save-transactions-of-year (year-kw transactions)
+                                       #(js/console.log "Transactions saved."))
+    updated)))
+
+(re-frame/reg-event-db
+ ::set-transactions-of-year
+ (fn-traced
+  [db [_ year-kw transactions]]
+  (assoc-in db [:transactions year-kw] transactions)))
+
+(re-frame/reg-event-db
+ ::set-selected-transaction-year
+ (fn-traced
+  [db [_ year]]
+  (let [year-kw (-> year str keyword)]
+    (storage/get-transactions-of-year
+     (fn [transactions]
+       (re-frame/dispatch [::set-transactions-of-year year-kw transactions]))
+     year-kw)
+    (assoc-in db [:transaction-view :selected-year] year-kw))))
+
+(re-frame/reg-event-db
+ ::deleting-transaction
+ (fn-traced
+  [db [_ transaction]]
+  (assoc-in db [:transaction-view :deleting] transaction)))
+
+(re-frame/reg-event-db
+ ::cancel-deleting-transaction
+ (fn-traced
+  [db [_ _]]
+  (assoc-in db [:transaction-view :deleting] nil)))
+
+(re-frame/reg-event-db
+ ::delete-transaction
+ (fn-traced
+  [db [_ year-kw month-kw]]
+  (let [transactions (get-in db [:transactions year-kw month-kw])
+        transaction (get-in db [:transaction-view :deleting])
+        budget (get db :budget)
+        updated (-> db
+                    (assoc-in [:transactions year-kw month-kw]
+                              (transactions/delete-transaction transactions
+                                                               transaction))
+                    (assoc-in [:transaction-view :deleting] nil)
+                    (assoc :budget
+                           (budget/delete-transaction budget transaction)))]
+    (storage/save-transactions-of-year
+     (get-in updated [:transactions year-kw])
+     #(js/console.log "Transactions saved."))
     updated)))
 
 (re-frame/reg-event-db
@@ -336,26 +403,30 @@
 (re-frame/reg-event-db
  ::deleting
  (fn-traced
- [db [_ item]]
- (assoc-in db [:delete-item :item-id] (:budget-item-id item))))
+  [db [_ item]]
+  (-> db
+      (assoc-in [:delete-item :item-id] (:budget-item-id item))
+      (assoc-in [:delete-item :id] (:id item)))))
 
  (re-frame/reg-event-db
   ::cancel-deleting
   (fn-traced
-   [db [_ item]]
+   [db [_ _]]
    (assoc db :delete-item nil)))
 
 (re-frame/reg-event-db
  ::delete
  (fn-traced
   [db [_ item-id view-mode]]
-  (let [item {:budget-item-id item-id :id item-id}
+  (let [id (get-in db [:delete-item :id])
+        item {:budget-item-id item-id :id id}
         keys (cond
                (= view-mode :budget) [:budget]
                (= view-mode :plan) [:plan :budget])
         budget (get-in db keys)
         budget (vec (remove #(= item-id (:budget-item-id %)) budget))
         updated (assoc-in db keys budget)]
+    (js/console.log "2. item = " (clj->js item))
     (storage/delete-budget-item item #(js/console.log "Deleted item."))
     updated)))
 
@@ -427,6 +498,12 @@
  (fn-traced
   [db [_ view-mode]]
   (assoc db :view-mode view-mode)))
+
+(re-frame/reg-event-db
+ ::set-main-menu-mode
+ (fn-traced
+  [db [_ menu-mode]]
+  (assoc db :main-menu-mode menu-mode)))
 
 (re-frame/reg-event-db
  ::start-adjusting-income

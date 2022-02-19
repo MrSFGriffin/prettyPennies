@@ -1,6 +1,8 @@
 (ns pp-pwa.budget
   (:require
-   [pp-pwa.specs :as specs]))
+   [pp-pwa.datetime :as dt]
+   [pp-pwa.specs :as specs]
+   [pp-pwa.utility :as utility]))
 
 (defn next-item-id
   "Gets the next item id to use for an new item"
@@ -10,16 +12,24 @@
       1
       (inc id))))
 
+(defn create-item
+  [budget name amount currency]
+  (utility/ensure-identity
+   {:budget-item-id (next-item-id budget)
+    :budget-item-name name
+    :spent {:amount 0 :currency-code currency}
+    :limit {:amount amount :currency-code currency}}))
+
+
 (defn add-item
   "Adds a new item to a budget."
   [budget name currency amount]
-  (conj (if (nil? budget)
-          []
-          budget)
-        {:budget-item-id (next-item-id budget)
-         :budget-item-name name
-         :spent {:amount 0 :currency-code currency}
-         :limit {:amount amount :currency-code currency}}))
+  (let [item (create-item budget name amount currency)]
+    (assert ::specs/budget-item item)
+    (conj item
+          (if (nil? budget)
+            []
+            budget))))
 
 (defn remove-item
   "Removes an item from a budget."
@@ -31,7 +41,7 @@
   "Applies fn to either all items or, if pred, those for which pred is true."
   ([budget fn] (for-items budget fn #(identity true)))
   ([budget fn pred]
-   (vec (map #(if (pred %) (fn %) %) budget))))
+   (mapv #(if (pred %) (fn %) %) budget)))
 
 (defn assoc-in-items
   "assoc-in value to kws of each item in budget. If pred, then only on items for which pred is true."
@@ -46,6 +56,21 @@
   [item-id item]
   (= (:budget-item-id item) item-id))
 
+(defn delete-transaction
+  [budget transaction]
+  (let [id (:budget-item-uuid transaction)
+        amount (get-in transaction [:spent :amount])]
+    (js/console.log "transaction = " (clj->js transaction))
+    (js/console.log "get-in transaction [:datetime-info :ticks]"
+                    (get-in transaction [:datetime-info :ticks]))
+    (for-items budget
+               #(update-in % [:spent :amount] - amount)
+               #(and (= id (:id %))
+                     (or (not (contains? % :most-recent-reset))
+                         (>=
+                          (get-in transaction [:datetime-info :ticks])
+                          (get-in % [:most-recent-reset :ticks])))))))
+
 (defn spend
   "Increase the spend on an item of a budget."
   [budget item amount]
@@ -54,16 +79,22 @@
                #(update-in % [:spent :amount] + amount)
                #(is-item? item-id %))))
 
+(defn reset-items
+  [budget pred]
+  (-> budget
+      (assoc-in-items [:spent :amount] 0 pred)
+      (assoc-in-items [:most-recent-reset] (dt/current-datetime-info) pred)))
+
 (defn reset-all-items
   "Resets spending on all items of a budget."
   [budget]
-  (assoc-in-items budget [:spent :amount] 0))
+  (reset-items budget (fn [_] true)))
 
 (defn reset-item
   "Resets spending on an item."
   [budget item]
   (let [item-id (:budget-item-id item)]
-    (assoc-in-items budget [:spent :amount] 0 #(is-item? item-id %))))
+    (reset-items budget #(is-item? item-id %))))
 
 (defn set-item-name
   "Sets the name of a budget-item of a budget."

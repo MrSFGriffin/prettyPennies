@@ -23,6 +23,11 @@
    (:view-mode db)))
 
 (re-frame/reg-sub
+ ::main-menu-mode
+ (fn [db _]
+   (:main-menu-mode db)))
+
+(re-frame/reg-sub
  ::budget-data-view
  (fn [db _]
    (:budget-data-view db)))
@@ -220,9 +225,7 @@
     (cons (-> (dt/current-year) str keyword year-keyword->year)
           (->> db
                :transactions
-               keys
-               (filter #(not= % :id))
-               (filter #(not= % :next-id))
+               :years
                (mapv year-keyword->year))))))
 
 (re-frame/reg-sub
@@ -231,8 +234,10 @@
    (distinct
     (cons (-> (dt/current-month) str keyword month-keyword->month-name)
           (let [year (selected-transaction-year db)
-                month-kws (keys
-                           (get-in db [:transactions (-> year str keyword)]))]
+                month-kws (filter
+                           #(not= % :id)
+                           (keys
+                            (get-in db [:transactions (-> year str keyword)])))]
             (mapv month-keyword->month-name month-kws))))))
 
 (re-frame/reg-sub
@@ -251,6 +256,26 @@
    (selected-transactions db)))
 
 (re-frame/reg-sub
+ ::deleting-transaction
+ (fn [db]
+   (get-in db [:transaction-view :deleting])))
+
+(re-frame/reg-sub
  ::any-transactions
  (fn [db]
-   (not-empty (selected-transactions db))))
+   (not-empty (get-in db [:transactions :years]))))
+
+(re-frame/reg-sub
+ ::any-item
+ (fn [db]
+   (not-empty (:budget db))))
+
+(re-frame/reg-sub
+ ::spend-is-valid
+ (fn [db]
+   (let [item-id (get-in db [:spending :item-id])
+         amount (get-in db [:spending :amount])
+         amount-error (get-in db [:spending :amount-error])]
+     (not
+      (or
+       (nil? item-id) amount-error (nil? amount) (= "" amount) (<= amount 0))))))

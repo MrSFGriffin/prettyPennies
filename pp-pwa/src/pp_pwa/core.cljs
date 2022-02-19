@@ -31,10 +31,15 @@
     (rdom/unmount-component-at-node root-el)
     (rdom/render [views/main-panel] root-el)))
 
+(defn load-transactions
+  []
+  (storage/get-transaction-years
+   (fn [years]
+     (re-frame/dispatch [::events/set-transaction-years years]))))
+
 (defn load-budget
   "Load budget from persistent storage"
   []
-  (re-frame/dispatch [::events/toggle-loading])
   (storage/get-budget-items
    (fn [b]
      (re-frame/dispatch [::events/set-budget b])
@@ -43,15 +48,27 @@
         (re-frame/dispatch [::events/set-plan-income i])
         (storage/get-plan-items
          (fn [items]
-           (re-frame/dispatch [::events/set-plan-items items])
-           (storage/get-transaction-map
-            (fn [transaction-map]
-              (re-frame/dispatch [::events/set-transaction-map transaction-map])
-              (re-frame/dispatch [::events/toggle-loading]))))))))))
+           (re-frame/dispatch [::events/set-plan-items items]))))))))
+
+(defn load-data
+  []
+  ;; to do a loading indictator: increment and decrement a counter
+  (storage/get-budget-items
+   (fn [b]
+     (re-frame/dispatch [::events/set-budget b])))
+  (storage/get-plan-income
+   (fn [i]
+     (re-frame/dispatch [::events/set-plan-income i])))
+  (storage/get-plan-items
+   (fn [items]
+     (re-frame/dispatch [::events/set-plan-items items])))
+  (storage/get-transaction-years
+   (fn [years]
+     (re-frame/dispatch [::events/set-transaction-years years]))))
 
 (defn init []
   (routes/start!)
   (re-frame/dispatch-sync [::events/initialize-db])
-  (load-budget)
+  (load-data)
   (dev-setup)
   (mount-root))

@@ -25,6 +25,21 @@
     true
     (apply distinct? (mapv :budget-item-name budget))))
 
+(s/def ::note string?)
+(s/def ::timezone string?)
+(s/def ::locale string?)
+(s/def ::datetime string?)
+(s/def ::datetime-info (s/keys :req-un [::datetime
+                                        ::locale
+                                        ::timezone]))
+(s/def ::transaction (s/keys :req-un [::id
+                                      ::datetime-info
+                                      ::budget-item-name
+                                      ::note
+                                      ::spent]))
+(s/def ::transaction-list (s/coll-of ::transaction))
+
+(s/def ::most-recent-reset ::datetime-info)
 (s/def ::colour-name
   (s/with-gen
     string?
@@ -49,7 +64,7 @@
     currency-code?
     #(gen/elements currency-codes)))
 (s/def ::read-only boolean?)
-(s/def ::id pos-int?)
+(s/def ::id #(or string? pos-int?))
 (s/def ::currency-value (s/keys :req-un (::amount ::currency-code)))
 (s/def ::spent ::currency-value)
 (s/def ::limit ::currency-value)
@@ -58,24 +73,13 @@
                                       ::spent
                                       ::limit]
                              :opt-un [::budget-item-colours
+                                      ::most-recent-reset
                                       ::read-only
                                       ::id]))
 (s/def ::budget (s/and (s/coll-of ::budget-item)
                        distinct-budget-item-names?))
 (s/def ::income ::amount)
 (s/def ::plan (s/keys :req-un [::income ::budget]))
-
-(s/def ::note string?)
-(s/def ::timezone string?)
-(s/def ::datetime string?)
-(s/def ::datetime-info (s/keys :req-un [::datetime
-                                        ::timezone]))
-(s/def ::transaction (s/keys :req-un [::id
-                                      ::datetime-info
-                                      ::budget-item-name
-                                      ::note
-                                      ::spent]))
-(s/def ::transaction-list (s/coll-of ::transaction))
 
 (s/def ::type string?)
 (s/def ::step number?)

@@ -1,7 +1,8 @@
 (ns pp-pwa.storage
   (:require
    [cljs.spec.alpha :as s]
-   [pp-pwa.specs :as specs]))
+   [pp-pwa.specs :as specs]
+   [pp-pwa.utility :as utility]))
 
 (defn get-indexeddb
   []
@@ -16,15 +17,16 @@
   (.error js/console "IndexedDB error: " e))
 
 (defn set-error-handler
-  "Sets up error handling on a request."
-  [request]
-  (set! (.-onerror request) error))
+  "Sets the onerror handler of an object."
+  [x]
+  (set! (.-onerror x) error))
 
 (def db-name "pretty-order")
-(def db-version 20)
+(def db-version 22)
 
 (def budget-store-name "budget")
 (def transaction-store-name "transaction")
+(def transaction-year-store-name "transaction-year")
 (def plan-income-store-name "plan-income")
 (def plan-items-store-name "plan-items")
 (def budget-view-store-name "budget-view")
@@ -34,7 +36,8 @@
   [budget-store-name
    plan-income-store-name
    plan-items-store-name
-   transaction-store-name])
+   transaction-store-name
+   transaction-year-store-name])
 
 (def defunct-store-names
   [budget-view-store-name
@@ -72,18 +75,26 @@
           (fn [e]
             (success-fn (.. e -target -result))))))
 
+(defn call-with-db-transaction
+  [cb-fn store-names]
+  (call-with-db
+   (fn [db]
+     (let [transaction (.transaction db (clj->js store-names) "readwrite")]
+       (cb-fn transaction)))))
+
 (defn save-map
   "Saves a map to persistent storage. It must have an :id key with a value."
-  [item success-fn store-name]
-  (call-with-db
-   (fn
-     [db]
-     (let [transaction (.transaction db #js [store-name] "readwrite")
-           store (.objectStore transaction store-name)
-           request (.put store (clj->js item))]
-       (set-error-handler request)
-       (set! (.-onsuccess request)
-             (fn [_e] (success-fn)))))))
+  ([item complete-fn store-name]
+   (call-with-db-transaction
+    (fn [tran]
+      (save-map item complete-fn store-name tran))
+    [store-name]))
+  ([item complete-fn store-name tran]
+   (set! (.-oncomplete tran) ; can move this to call-with-db-transaction
+         (fn [_e] (complete-fn)))
+   (let [store (.objectStore tran store-name)
+         request (.put store (clj->js item))]
+     (set-error-handler tran))))
 
 (defn save-transaction-map
   ([trans-map success-fn]
@@ -91,13 +102,41 @@
   ([trans-map success-fn store-name]
    (save-map trans-map success-fn store-name)))
 
+(defn save-transactions-of-year
+  "Stores: {:id 2022 :1 [transaction...] :2 [transaction...]}."
+  ([success-fn transactions-of-year]
+   (call-with-db-transaction
+    (fn [db-tran]
+      (save-transactions-of-year success-fn
+                                 transactions-of-year
+                                 db-tran))
+    [transaction-year-store-name]))
+  ([success-fn transactions-of-year db-tran]
+   (save-map success-fn
+             transactions-of-year
+             transaction-year-store-name
+             db-tran)))
+
 (defn save-budget-item
   "Saves a budget-item from persistent storage."
-  ([item success-fn] (save-budget-item item success-fn budget-store-name))
-  ([item success-fn store-name]
-   (let [item (assoc item :id (:budget-item-id item))]
+  ([item success-fn]
+   (call-with-db-transaction
+    (fn [db-tran]
+      (save-budget-item item success-fn db-tran))
+    [budget-store-name]))
+  ([item success-fn db-tran]
+   (let [item (utility/ensure-identity item)]
      (when (not (:read-only item))
-       (save-map item success-fn store-name)))))
+       (save-map item success-fn budget-store-name db-tran)))))
+
+(defn delete-transaction
+  "Updates the transactions of the year that contained the deleted transaction and, if one exists, it saves the corresponding budget-item."
+  [complete-fn transactions-of-year budget-item]
+  (call-with-db-transaction
+   (fn [db-tran]
+     (save-transactions-of-year complete-fn transactions-of-year db-tran)
+     (save-budget-item budget-item complete-fn db-tran))
+   [transaction-year-store-name budget-store-name]))
 
 (defn save-plan-income
   "Saves an income to persistent storage."
@@ -125,8 +164,7 @@
   "Deletes a budget-item from persistent storage."
   ([item success-fn] (delete-budget-item item success-fn budget-store-name))
   ([item success-fn store-name]
-   (let [item (assoc item :id (:budget-item-id item))]
-     (delete-map item success-fn store-name))))
+   (delete-map item success-fn store-name)))
 
 (defn delete-plan-item
   "Deletes a budget-view-item"
@@ -144,9 +182,39 @@
        (set-error-handler request)
        (set! (.-onsuccess request)
              (fn
-               [e]
+               [_e]
                (success-fn
                 (js->clj (.-result request) :keywordize-keys true))))))))
+
+(defn get-map
+  [success-fn store-name key]
+  (call-with-db
+   (fn
+     [db]
+     (let [transaction (.transaction db #js [store-name] "readwrite")
+           store (.objectStore transaction store-name)
+           request (.get store key)]
+       (set-error-handler request)
+       (set! (.-onsuccess request)
+             (fn
+               [_e]
+               (success-fn
+                (js->clj (.-result request) :keywordize-keys true))))))))
+
+(defn get-keys
+  [success-fn store-name]
+  (call-with-db
+   (fn
+     [db]
+     (let [transaction (.transaction db #js [store-name] "readonly")
+           store (.objectStore transaction store-name)
+           request (.getAllKeys store)]
+       (set-error-handler request)
+       (set! (.-onsuccess request)
+             (fn
+               [_e]
+               (success-fn
+                (js->clj (.-result request)))))))))
 
 (defn get-transaction-map
   ([success-fn] (get-transaction-map success-fn transaction-store-name))
@@ -157,10 +225,26 @@
                                            {:id 1})))]
      (get-maps wrapped-success-fn store-name))))
 
+(defn get-transactions-of-year
+  [success-fn year]
+  (get-map (fn [x] (success-fn (or x {}))) ;; or {}, as no data for the year
+           transaction-year-store-name
+           year))
+
+(defn get-transaction-years
+  [success-fn]
+  (let [wrapped-success-fn (fn [years]
+                             (success-fn (mapv keyword years)))]
+    (get-keys wrapped-success-fn transaction-year-store-name)))
+
 (defn get-budget-items
   "Retrieves budget items from persistent storage and passes them to success-fn."
   ([success-fn] (get-budget-items success-fn budget-store-name))
-  ([success-fn store-name] (get-maps success-fn store-name)))
+  ([success-fn store-name]
+   (let [wrapped-success-fn
+         (fn [items]
+           (success-fn (mapv utility/ensure-identity items)))]
+     (get-maps wrapped-success-fn store-name))))
 
 (defn get-plan-income
   "Retrieves a budget view income from persistent storage."

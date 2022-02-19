@@ -3,9 +3,10 @@
 (def default-db
   {:name "Money"
    :budget []
-   :transactions {:id 1}
+   :transactions {:years []}
    :view :money
    :view-mode :budget
+   :main-menu-mode :budget
    :budget-data-view :table
    :budget-view {:income 0 :budget []}
    :sync-status {:indexeddb :not-synced

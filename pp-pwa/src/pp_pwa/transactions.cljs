@@ -8,20 +8,27 @@
 ;;   [transactions]
 ;;   (:next-id transactions))
 
+
 (defn add-transaction
-  [transactions budget-item-name currency-value note]
-  (let [;;id (next-id transactions)
-        new-tran {;;:id id
-                  :budget-item-name budget-item-name
+  [transactions budget-item currency-value note]
+  (let [new-tran {:budget-item-name (:budget-item-name  budget-item)
+                  :budget-item-uuid (:id budget-item)
                   :spent currency-value
                   :note note
-                  :datetime-info {:datetime (dt/current-datetime)
-                                  :locale (dt/locale)
-                                  :timezone (dt/time-zone)}}
-        year-kw (-> (dt/current-year) str keyword)
-        month-kw (-> (dt/current-month) str keyword)
+                  :datetime-info (dt/current-datetime-info)}
+        {year :year
+         month :month} (dt/current-year-and-month)
+        year-kw  (-> year str keyword)
+        month-kw (-> month str keyword)
         trans-list (get-in transactions [year-kw month-kw])
         new-trans-list (cons new-tran trans-list)]
-        ;;updated (assoc transactions :next-id (inc id))]
     (s/assert ::specs/transaction-list new-trans-list)
-    (assoc-in transactions [year-kw month-kw] new-trans-list)))
+    {:transactions (-> transactions
+                       (assoc-in [year-kw :id] year-kw)
+                       (assoc-in [year-kw month-kw] new-trans-list)
+                       (update :years #(distinct (cons year-kw %))))
+     :year-kw year-kw}))
+
+(defn delete-transaction
+  [transactions transaction]
+  (filter #(not= % transaction) transactions))
