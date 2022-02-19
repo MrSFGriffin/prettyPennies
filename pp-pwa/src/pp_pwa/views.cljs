@@ -219,10 +219,15 @@
         {:id "spend-note-input"
          :fluid true
          :on-blur #(update-text-property
-                      %
-                      ::events/set-spending-note
-                      ::events/set-spending-note-error)
-         :label "Note"}]]]]))
+                    %
+                    ::events/set-spending-note
+                    ::events/set-spending-note-error)
+         :label "Note"}]]]
+     [:> ui/Grid.Row
+      [:> ui/Grid.Column
+       [pink-button [:span [:> ui/Icon {:name "payment"}] "Submit"]
+        #(re-frame/dispatch [::events/spend])
+        (not @(re-frame/subscribe [::subs/spend-is-valid]))]]]]))
 
 (defn budget-item-selector
   [options]

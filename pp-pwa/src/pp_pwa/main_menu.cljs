@@ -13,18 +13,19 @@
      {:on-click #(do
                    (re-frame/dispatch [::events/set-main-menu-mode :budget])
                    (re-frame/dispatch [::events/cancel-spending]))}
-     :icon-options {:name "backward"}
-     :label "Back"}
+     :icon-options {:name "envelope"}
+     :label "Envelopes"}
     {:menu-item-options
-     {:on-click #(re-frame/dispatch [::events/spend])
-      :disabled
-      (not @(re-frame/subscribe [::subs/spend-is-valid]))}
-     :icon-options {:name "payment"}
-     :label "Spend"}]})
+     {:on-click #(do
+                   (re-frame/dispatch [::events/cancel-spending])
+                   (re-frame/dispatch [::events/set-main-menu-mode :transaction])
+                   (re-frame/dispatch [::events/set-view :transaction]))}
+     :icon-options {:name "numbered-list"}
+     :label "Transactions"}]})
 
 (defn transactions-menu-data
   []
-  {:menu-options {:widths 1}
+  {:menu-options {:widths 2}
    :items
    [;; {:menu-item-options
     ;;  {:disabled true
@@ -36,7 +37,15 @@
                    (re-frame/dispatch [::events/set-main-menu-mode :budget])
                    (re-frame/dispatch [::events/set-view :money]))}
      :icon-options {:name "envelope"}
-     :label "Envelopes"}]})
+     :label "Envelopes"}
+    {:menu-item-options
+     {:on-click #(do
+                   (re-frame/dispatch [::events/set-main-menu-mode :spending])
+                   (re-frame/dispatch [::events/set-view :money])
+                   (re-frame/dispatch [::events/spending]))
+      :disabled (not @(re-frame/subscribe [::subs/any-item]))}
+     :icon-options {:name "payment"}
+     :label "Spend"}]})
 
 (defn settings-menu-data
   []
