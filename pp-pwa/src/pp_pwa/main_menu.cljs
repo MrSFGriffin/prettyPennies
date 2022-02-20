@@ -13,8 +13,8 @@
      {:on-click #(do
                    (re-frame/dispatch [::events/set-main-menu-mode :budget])
                    (re-frame/dispatch [::events/cancel-spending]))}
-     :icon-options {:name "envelope"}
-     :label "Envelopes"}
+     :icon-options {:name "clipboard outline"}
+     :label "Budget"}
     {:menu-item-options
      {:on-click #(do
                    (re-frame/dispatch [::events/cancel-spending])
@@ -36,8 +36,8 @@
      {:on-click #(do
                    (re-frame/dispatch [::events/set-main-menu-mode :budget])
                    (re-frame/dispatch [::events/set-view :money]))}
-     :icon-options {:name "envelope"}
-     :label "Envelopes"}
+     :icon-options {:name "clipboard outline"}
+     :label "Budget"}
     {:menu-item-options
      {:on-click #(do
                    (re-frame/dispatch [::events/set-main-menu-mode :spending])
@@ -61,8 +61,8 @@
      :label "Transactions"}
     {:menu-item-options
      {:on-click #(re-frame/dispatch [::events/set-view :money])}
-     :icon-options {:name "envelope"}
-     :label "Envelopes"}]})
+     :icon-options {:name "clipboard outline"}
+     :label "Budget"}]})
 
 (defn budget-menu-data
   []
