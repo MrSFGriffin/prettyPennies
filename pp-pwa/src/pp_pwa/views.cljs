@@ -905,6 +905,13 @@
     {:centered true}
     [transaction-list-panel]]])
 
+(defn history-panel []
+  [:> ui/Grid
+   [:> ui/Grid.Row]
+   [:> ui/Grid.Row
+    [:> ui/Grid.Column
+     [:h1 "History"]]]])
+
 (defn money-panel []
   (let [view @(re-frame/subscribe [::subs/view])]
     [:> ui/Card
@@ -915,6 +922,7 @@
      (cond
        (= view :settings) [settings-panel]
        (= view :transaction) [transaction-panel]
+       (= view :history) [history-panel]
        :else [budget-panel])]))
 
 (defn home-panel []
