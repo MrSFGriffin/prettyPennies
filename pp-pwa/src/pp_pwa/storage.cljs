@@ -120,14 +120,14 @@
 (defn save-budget-item
   "Saves a budget-item from persistent storage."
   ([item success-fn]
+   (save-budget-item item success-fn budget-store-name))
+  ([item success-fn store-name]
    (call-with-db-transaction
     (fn [db-tran]
-      (save-budget-item item success-fn db-tran))
-    [budget-store-name]))
-  ([item success-fn db-tran]
-   (let [item (utility/ensure-identity item)]
-     (when (not (:read-only item))
-       (save-map item success-fn budget-store-name db-tran)))))
+      (let [item (utility/ensure-identity item)]
+        (when (not (:read-only item))
+          (save-map item success-fn store-name db-tran))))
+    [store-name])))
 
 (defn delete-transaction
   "Updates the transactions of the year that contained the deleted transaction and, if one exists, it saves the corresponding budget-item."

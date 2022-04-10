@@ -6,11 +6,13 @@
    [re-frame.core :as re-frame]
    [pp-pwa.budget :as budget]
    [pp-pwa.db :as db]
+   [pp-pwa.datetime :as dt]
    [pp-pwa.specs :as specs]
    [pp-pwa.storage :as storage]
    [pp-pwa.subs :as subs]
    [pp-pwa.transactions :as transactions]
-   [day8.re-frame.tracing :refer-macros [fn-traced]]))
+   [day8.re-frame.tracing :refer-macros [fn-traced]]
+   [pp-pwa.utility :as u]))
 
 (defn scroll-to-id
   [id]
@@ -83,6 +85,7 @@
           (scroll-to-id "item-name-input")
           (focus "item-name-input"))))
     (-> db
+        (assoc :add-item-msg nil)
         (assoc :resetting-all nil)
         (update :adding-item not)
         (assoc-in [:new-item :name] default-name)
@@ -146,7 +149,7 @@
       (if (s/valid? ::specs/budget (get-in updated keys))
         (do
           (save-fn item #(js/console.log "saved item"))
-          updated)
+          (assoc updated :add-item-msg (str "Added " name)))
         (do
           (js/console.log "Invalid budget: " (clj->js (s/explain ::specs/budget (get-in updated keys))))
           (assoc-in db
@@ -169,15 +172,6 @@
   [db [_ _]]
    (assoc db :selected-item-id nil)))
 
-;; (re-frame/reg-event-db
-;;  ::spending
-;;  (fn-traced
-;;   [db [_ _]]
-;;   (reagent/after-render
-;;    #(do (scroll-to-id "spend-amount-input")
-;;         (focus "spend-amount-input")))
-;;   (assoc db :spending {})))
-
 (re-frame/reg-event-db
  ::spending
  (fn-traced
@@ -185,9 +179,11 @@
   (reagent/after-render
    #(do (scroll-to-id "budget-spending-panel-header")
         (focus "spend-amount-input")))
-  (assoc-in db [:spending :item-id] (:budget-item-id
-                                     (or item
-                                         (first (:budget db)))))))
+  (-> db
+      (assoc-in [:spending :item-id] (:budget-item-id
+                                      (or item
+                                          (first (:budget db)))))
+      (assoc :spend-msg nil))))
 
 (re-frame/reg-event-db
  ::cancel-spending
@@ -242,7 +238,9 @@
         item {:budget-item-id item-id}
         updated (-> db
                     (update :budget budget/spend item amount)
-                    reset-spending)
+                    reset-spending
+                    (assoc :spend-msg (str "Spent "
+                                           (u/currency-str (quot amount 100))))) ; using quot, rather than /, to work around a weird bug
         item (->> updated
                   :budget
                   (filter #(= item-id (:budget-item-id %)))
@@ -251,7 +249,7 @@
       (do
         (re-frame/dispatch [::add-transaction item amount note])
         (storage/save-budget-item item #(js/console.log "Item updated."))
-        updated)
+        (assoc updated :message "Success"))
       db))))
 
 (re-frame/reg-event-db
@@ -299,6 +297,19 @@
        (re-frame/dispatch [::set-transactions-of-year year-kw transactions]))
      year-kw)
     (assoc-in db [:transaction-view :selected-year] year-kw))))
+
+(re-frame/reg-event-db
+ ::set-selected-transaction-month
+ (fn-traced
+  [db [_ month]]
+  (let [month-kw (-> month dt/month-number str keyword)]
+    (assoc-in db [:transaction-view :selected-month] month-kw))))
+
+;; (re-frame/reg-event-db
+;;  ::set-selected-transaction-month
+;;  (fn-traced
+;;   [db [_ month]]
+;;   (assoc-in db [:transaction-view :month] )))
 
 (re-frame/reg-event-db
  ::deleting-transaction
@@ -425,9 +436,14 @@
                (= view-mode :plan) [:plan :budget])
         budget (get-in db keys)
         budget (vec (remove #(= item-id (:budget-item-id %)) budget))
-        updated (assoc-in db keys budget)]
-    (js/console.log "2. item = " (clj->js item))
-    (storage/delete-budget-item item #(js/console.log "Deleted item."))
+        updated (-> db
+                    (assoc-in keys budget)
+                    (assoc :edit-item nil)
+                    (assoc :delete-item nil))
+        console-fn #(js/console.log "Deleted item.")]
+    (if (= view-mode :plan)
+      (storage/delete-plan-item item console-fn)
+      (storage/delete-budget-item item console-fn))
     updated)))
 
 (re-frame/reg-event-db

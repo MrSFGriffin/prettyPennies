@@ -12,7 +12,8 @@
    [pp-pwa.routes :as routes]
    [pp-pwa.styles :as styles]
    [pp-pwa.specs :as specs]
-   [pp-pwa.subs :as subs]))
+   [pp-pwa.subs :as subs]
+   [pp-pwa.utility :as u]))
 
 ;(def budget-item-border-colour-css (styles/colour :apple :system-teal :css))
 
@@ -26,8 +27,7 @@
 
 (defn currency-str
   [amount]
-  (.toLocaleString
-   (or amount 0) "sk-SK" #js {:style "currency" :currency "EUR"}))
+  (u/currency-str amount))
 
 (defn pink-button
   ([label] (pink-button label #()))
@@ -38,6 +38,7 @@
      :disabled disabled
      :onClick on-click}
     label]))
+
 
 (defn update-text-property
   "Updates a text property."
@@ -190,7 +191,8 @@
 (defn budget-item-spend-panel
   [item]
   (let [amount-error @(re-frame/subscribe [::subs/spending-amount-error])
-        note-error @(re-frame/subscribe [::subs/spending-note-error])]
+        note-error @(re-frame/subscribe [::subs/spending-note-error])
+        msg @(re-frame/subscribe [::subs/spend-msg])]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:style {:padding-bottom 0}}
@@ -227,7 +229,13 @@
       [:> ui/Grid.Column
        [pink-button [:span [:> ui/Icon {:name "payment"}] "Submit"]
         #(re-frame/dispatch [::events/spend])
-        (not @(re-frame/subscribe [::subs/spend-is-valid]))]]]]))
+        (not @(re-frame/subscribe [::subs/spend-is-valid]))]]]
+     (when msg
+       [:> ui/Grid.Row
+        [:> ui/Grid.Column
+         [:> ui/Message
+          {:success true}
+          msg]]])]))
 
 (defn budget-item-selector
   [options]
@@ -297,7 +305,7 @@
             #(re-frame/dispatch [::events/toggle-reset-item])]])]])))
 
 (defn budget-item-amount-panel
-  [item]
+  [item planning]
   (let [raw-limit (-> item :limit :amount)
         limit (/ raw-limit 100)
         raw-spent (-> item :spent :amount)
@@ -310,12 +318,13 @@
        {:style {:font-size "1.3em"
                 :color (if negative "red" "black")}
         :text-align "right"}
-        (currency-str spent)]]
-     [:> ui/Grid.Row
-      {:style {:padding-top 0}}
-      [:> ui/Grid.Column
-       {:text-align "right"}
-       (currency-str limit)]]]))
+       (currency-str (if planning limit spent))]]
+     (when (not planning)
+       [:> ui/Grid.Row
+        {:style {:padding-top 0}}
+        [:> ui/Grid.Column
+         {:text-align "right"}
+         (currency-str limit)]])]))
 
 (defn budget-item-name-panel
   [item planning]
@@ -375,7 +384,7 @@
         :width 7
         :style {:border-top budget-item-border-style
                 :padding "0.4em"}}
-       [budget-item-amount-panel item]]]
+       [budget-item-amount-panel item planning]]]
      (when (and selected writeable)
        [:> ui/Grid.Row
         {:style {:padding-top 0
@@ -411,7 +420,8 @@
   []
   (let [name-error @(re-frame/subscribe [::subs/new-item-name-error])
         amount-error @(re-frame/subscribe [::subs/new-item-amount-error])
-        view-mode @(re-frame/subscribe [::subs/view-mode])]
+        view-mode @(re-frame/subscribe [::subs/view-mode])
+        msg @(re-frame/subscribe [::subs/add-item-msg])]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:centered true
@@ -480,7 +490,14 @@
           [pink-button
            [:span [:> ui/Icon {:name "plus"}] "Add"]
            #(re-frame/dispatch [::events/add-item view-mode])
-           (or name-error amount-error)]]]]]]]))
+           (or name-error amount-error)]]]
+        (when msg
+          [:> ui/Grid.Row
+           {:centered true}
+           [:> ui/Message
+            {:success true
+             :onDimiss #()}
+            msg]])]]]]))
 
 (defn reset-all-panel
   []
@@ -701,7 +718,9 @@
                 (re-frame/dispatch [::events/set-view-mode :budget])
                 (= index 1)
                 (re-frame/dispatch [::events/set-view-mode :plan])))}]]])
-     (when planning
+     (when
+         (and planning
+              (not (or editing spending resetting-all adding-item adjusting-income)))
        [:> ui/Grid.Row
         {:centered true
          :style {:padding-bottom "1em"}}
@@ -722,10 +741,11 @@
         {:style {:margin-left "1em"
                  :margin-top "2em"}
          :text-align "left"}
-        [:> ui/Grid.Column
-         {:width 14}
-         [pink-button [:span [:> ui/Icon {:name "money"}] "Change income"]
-          #(re-frame/dispatch [::events/start-adjusting-income income])]]
+        (when planning
+          [:> ui/Grid.Column
+           {:width 14}
+           [pink-button [:span [:> ui/Icon {:name "money"}] "Change income"]
+            #(re-frame/dispatch [::events/start-adjusting-income income])]])
         [:> ui/Grid.Row
          {:style {:margin-left "1em"
                   :margin-top "2em"}
@@ -839,16 +859,21 @@
        {:width (if (empty? transactions) 8 7)}
        [:> ui/Dropdown
         {:fluid true
+         :on-change #(do (re-frame/dispatch
+                          [::events/set-selected-transaction-month
+                           (-> % .-target .-innerText)]))
          :options month-options
          :placeholder "Month"
          :selection true
-         :value month}]]
+         :default-value month
+         }]]
       [:> ui/Grid.Column
        {:width 6}
        [:> ui/Dropdown
         {:fluid true
          :on-change #(re-frame/dispatch
-                      [::events/set-selected-transaction-year])
+                      [::events/set-selected-transaction-year
+                       (-> % .-target .-innerText)])
          :options year-options
          :placeholder "Year"
          :selection true

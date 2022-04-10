@@ -43,6 +43,11 @@
    (:loading db)))
 
 (re-frame/reg-sub
+ ::message
+ (fn [db _]
+   (:messge db)))
+
+(re-frame/reg-sub
  ::budget
  (fn [db]
    (:budget db)))
@@ -121,6 +126,11 @@
    (:adding-item db)))
 
 (re-frame/reg-sub
+ ::add-item-msg
+ (fn [db]
+   (:add-item-msg db)))
+
+(re-frame/reg-sub
  ::resetting-all
  (fn [db]
    (:resetting-all db)))
@@ -166,6 +176,11 @@
    (get-in db [:spending :note-error])))
 
 (re-frame/reg-sub
+ ::spend-msg
+ (fn [db]
+   (get db :spend-msg)))
+
+(re-frame/reg-sub
  ::edit-item-id
  (fn [db]
    (get-in db [:edit-item :item-id])))
@@ -200,8 +215,10 @@
       (dt/current-year)))
 
 (defn selected-transaction-month [db]
-  (or (get-in db [:transaction-view :month])
-      (dt/current-month)))
+  (let [month (get-in db [:transaction-view :selected-month])]
+    (if month
+      (-> month str (subs 1) js/parseInt)
+      (dt/current-month))))
 
 (defn selected-transactions [db]
   (or
@@ -214,9 +231,13 @@
   [year-keyword]
   (-> year-keyword str (subs 1) js/parseInt))
 
+(defn month-keyword->month-number
+  [month-keyword]
+  (-> month-keyword str (subs 1) js/parseInt))
+
 (defn month-keyword->month-name
   [month-keyword]
-  (-> month-keyword str (subs 1) js/parseInt dt/month-name))
+  (-> month-keyword month-keyword->month-number dt/month-name))
 
 (re-frame/reg-sub
  ::transaction-years
@@ -237,7 +258,11 @@
                 month-kws (filter
                            #(not= % :id)
                            (keys
-                            (get-in db [:transactions (-> year str keyword)])))]
+                            (get-in db [:transactions (-> year str keyword)])))
+                month-kws (sort #(compare
+                                  (month-keyword->month-number %2)
+                                  (month-keyword->month-number %1))
+                                month-kws)]
             (mapv month-keyword->month-name month-kws))))))
 
 (re-frame/reg-sub
