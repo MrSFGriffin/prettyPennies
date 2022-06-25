@@ -22,7 +22,7 @@
   (set! (.-onerror x) error))
 
 (def db-name "pretty-order")
-(def db-version 22)
+(def db-version 23)
 
 (def budget-store-name "budget")
 (def transaction-store-name "transaction")
@@ -31,13 +31,15 @@
 (def plan-items-store-name "plan-items")
 (def budget-view-store-name "budget-view")
 (def income-store-name "income")
+(def budget-snapshot-store-name "budget-snapshot")
 
 (def store-names
   [budget-store-name
    plan-income-store-name
    plan-items-store-name
    transaction-store-name
-   transaction-year-store-name])
+   transaction-year-store-name
+   budget-snapshot-store-name])
 
 (def defunct-store-names
   [budget-view-store-name
@@ -128,6 +130,18 @@
         (when (not (:read-only item))
           (save-map item success-fn store-name db-tran))))
     [store-name])))
+
+(defn save-budget-snapshot
+  [budget datetime-info success-fn]
+  (call-with-db-transaction
+   (fn [db-tran]
+     (save-map {:id(:ticks datetime-info) ; used as db key
+                :budget budget
+                :datetime-info datetime-info}
+               success-fn
+               budget-snapshot-store-name
+               db-tran))
+   [budget-store-name]))
 
 (defn delete-transaction
   "Updates the transactions of the year that contained the deleted transaction and, if one exists, it saves the corresponding budget-item."

@@ -310,7 +310,8 @@
         limit (/ raw-limit 100)
         raw-spent (-> item :spent :amount)
         spent (/ raw-spent 100)
-        negative (> spent limit)]
+        left (- limit spent)
+        negative (<= left 0)]
     [:> ui/Grid
      [:> ui/Grid.Row
       {:style {:padding-bottom "0.3em"}}
@@ -318,7 +319,7 @@
        {:style {:font-size "1.3em"
                 :color (if negative "red" "black")}
         :text-align "right"}
-       (currency-str (if planning limit spent))]]
+       (currency-str (if planning limit left))]]
      (when (not planning)
        [:> ui/Grid.Row
         {:style {:padding-top 0}}
@@ -719,8 +720,8 @@
                 (= index 1)
                 (re-frame/dispatch [::events/set-view-mode :plan])))}]]])
      (when
-         (and planning
-              (not (or editing spending resetting-all adding-item adjusting-income)))
+      (and planning
+           (not (or editing spending resetting-all adding-item adjusting-income)))
        [:> ui/Grid.Row
         {:centered true
          :style {:padding-bottom "1em"}}
@@ -751,9 +752,15 @@
                   :margin-top "2em"}
           :text-align "left"}
          [:> ui/Grid.Column
-          {:width 10}
+          {:width 15}
           [pink-button [:span [:> ui/Icon {:name "plus"}] "Add Category"]
            #(re-frame/dispatch [::events/toggle-adding-item])]]
+         (when (not planning)
+           [:> ui/Grid.Column
+            {:style {:margin-top "2em"}
+             :width 10}
+            [pink-button [:span [:> ui/Icon {:name "money"}] "Add Salary"]
+             #(re-frame/dispatch [::events/toggle-adding-salary])]])
          (when (not planning)
            [:> ui/Grid.Column
             {:style {:margin-top "2em"}

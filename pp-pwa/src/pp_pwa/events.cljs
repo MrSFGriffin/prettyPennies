@@ -447,6 +447,43 @@
     updated)))
 
 (re-frame/reg-event-db
+ ::toggle-adding-salary
+ (fn-traced
+  [db [_ _]]
+  (when (:adding-salary db)
+    (goto-selected db))
+  (-> db
+      (update :adding-salary not))))
+
+(defn reset-all
+  [db]
+  (let [updated (update db :budget budget/reset-all-items)]
+    (if (s/valid? ::specs/budget (:budget updated))
+      (let [updated (update updated :resetting-all not)
+            budget (:budget updated)
+            msg-fn #(js/console.log "Item updated.")]
+        (run! #(storage/save-budget-item % msg-fn) budget)
+        updated)
+      db)))
+
+(re-frame/reg-event-db
+ ::add-salary
+ (fn-traced
+  [db [_ _]]
+  ;; add salary to storage
+  ;; - save snapshot of current budget into budget-snapshot store
+  ;; reset all
+  (let [updated db
+        budget (:budget updated)
+        updated (update updated :adding-salary not)]
+    (storage/save-budget-snapshot
+     budget
+     (dt/current-datetime-info)
+     #(do
+        (js/console.log "budget snapshot saved.")
+        (reset-all updated))))))
+
+(re-frame/reg-event-db
  ::toggle-resetting-all
  (fn-traced
   [db [_ _]]
@@ -461,14 +498,7 @@
  (fn-traced
   [db [_ _]]
   (goto-selected db)
-  (let [updated (update db :budget budget/reset-all-items)]
-    (if (s/valid? ::specs/budget (:budget updated))
-      (let [updated (update updated :resetting-all not)
-            budget (:budget updated)
-            msg-fn #(js/console.log "Item updated.")]
-        (run! #(storage/save-budget-item % msg-fn) budget)
-        updated)
-      db))))
+  (reset-all db)))
 
 (re-frame/reg-event-db
  ::toggle-reset-item
