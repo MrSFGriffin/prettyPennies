@@ -55,8 +55,8 @@
                          :item (budget-menu-item)}
                         {:excluded-menu-mode :transaction
                          :item (transaction-menu-item)}
-                        {:excluded-menu-mode :history
-                         :item (history-menu-item)}
+                        ;; {:excluded-menu-mode :history
+                        ;;  :item (history-menu-item)}
                         {:excluded-menu-mode :spending
                          :item (spend-menu-item)}]
         menu-items (remove #(= (:excluded-menu-mode %) menu-mode)
