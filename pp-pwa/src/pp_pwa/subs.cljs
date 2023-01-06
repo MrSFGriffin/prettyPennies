@@ -211,8 +211,10 @@
    (-> db :income-adjustment :income-error)))
 
 (defn selected-transaction-year [db]
-  (or (get-in db [:transaction-view :year])
-      (dt/current-year)))
+  (let [year (get-in db [:transaction-view :selected-year])]
+    (if year
+      (-> year name js/parseInt)
+      (dt/current-year))))
 
 (defn selected-transaction-month [db]
   (let [month (get-in db [:transaction-view :selected-month])]
