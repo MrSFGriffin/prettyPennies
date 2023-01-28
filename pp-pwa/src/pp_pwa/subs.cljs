@@ -217,9 +217,12 @@
       (dt/current-year))))
 
 (defn selected-transaction-month [db]
-  (let [month (get-in db [:transaction-view :selected-month])]
-    (if month
-      (-> month str (subs 1) js/parseInt)
+  (let [month-kw (get-in db [:transaction-view :selected-month])]
+    (if month-kw
+      (let [month-number (-> month-kw str (subs 1) js/parseInt)]
+        (if (< month-number 12)
+          month-number
+          (dt/current-month)))
       (dt/current-month))))
 
 (defn selected-transactions [db]
@@ -255,17 +258,22 @@
  ::transaction-months
  (fn [db]
    (distinct
-    (cons (-> (dt/current-month) str keyword month-keyword->month-name)
-          (let [year (selected-transaction-year db)
-                month-kws (filter
-                           #(not= % :id)
-                           (keys
-                            (get-in db [:transactions (-> year str keyword)])))
-                month-kws (sort #(compare
-                                  (month-keyword->month-number %2)
-                                  (month-keyword->month-number %1))
-                                month-kws)]
-            (mapv month-keyword->month-name month-kws))))))
+    ;; (or (not= (dt/current-year) year)
+    (let [year (selected-transaction-year db)]
+      (distinct
+       (concat (if (= (dt/current-year) year)
+               (-> (dt/current-month) str keyword month-keyword->month-name vector)
+               nil)
+             (let [year (selected-transaction-year db)
+                   month-kws (filter
+                              #(not= % :id)
+                              (keys
+                               (get-in db [:transactions (-> year str keyword)])))
+                   month-kws (sort #(compare
+                                     (month-keyword->month-number %1)
+                                     (month-keyword->month-number %2))
+                                   month-kws)]
+               (mapv month-keyword->month-name month-kws))))))))
 
 (re-frame/reg-sub
  ::selected-transaction-year

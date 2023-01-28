@@ -870,10 +870,9 @@
                           [::events/set-selected-transaction-month
                            (-> % .-target .-innerText)]))
          :options month-options
-         :placeholder "Month"
+         :placeholder month
          :selection true
-         :default-value month
-         }]]
+         :default-value month}]]
       [:> ui/Grid.Column
        {:width 6}
        [:> ui/Dropdown
@@ -889,13 +888,18 @@
       {:style {:padding-bottom 0
                :padding-top 0}}
       [:> ui/Grid.Column]]
-     (map (fn [i]
-            [:> ui/Grid.Row
-             {:style {:padding-bottom 0
-                      :padding-top "1em"}}
-             [:> ui/Grid.Column
-              [transaction-item-panel i]]])
-          transactions)]))
+
+     (if (empty? transactions)
+       [:> ui/Grid.Row
+        [:> ui/Grid.Column
+         [:p (str "No transactions in " month " " year)]]]
+       (map (fn [i]
+              [:> ui/Grid.Row
+               {:style {:padding-bottom 0
+                        :padding-top "1em"}}
+               [:> ui/Grid.Column
+                [transaction-item-panel i]]])
+            transactions))]))
 
 (defn settings-panel
   []

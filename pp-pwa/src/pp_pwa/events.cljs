@@ -256,8 +256,8 @@
  ::set-transaction-years
  (fn-traced
   [db [_ years]]
-  (let [year (-> years first str (subs 1))
-        year-kw (-> year str keyword)]
+  (let [year-kw (-> years last)
+        year (-> year-kw str (subs 1))]
     (storage/get-transactions-of-year
      (fn [transactions]
        (re-frame/dispatch [::set-transactions-of-year year-kw transactions]))
@@ -281,11 +281,19 @@
                                        #(js/console.log "Transactions saved."))
     updated)))
 
+(defn set-selected-transaction-month [db month-kw]
+  (assoc-in db [:transaction-view :selected-month] month-kw))
+
 (re-frame/reg-event-db
  ::set-transactions-of-year
  (fn-traced
   [db [_ year-kw transactions]]
-  (assoc-in db [:transactions year-kw] transactions)))
+  (let [month-kw
+        (-> transactions first first)]
+    (-> db
+        (assoc-in [:transactions year-kw] transactions)
+        (set-selected-transaction-month month-kw)))))
+
 
 (re-frame/reg-event-db
  ::set-selected-transaction-year
@@ -295,7 +303,7 @@
     (storage/get-transactions-of-year
      (fn [transactions]
        (re-frame/dispatch [::set-transactions-of-year year-kw transactions]))
-     year-kw)
+     year)
     (assoc-in db [:transaction-view :selected-year] year-kw))))
 
 (re-frame/reg-event-db
@@ -303,7 +311,7 @@
  (fn-traced
   [db [_ month]]
   (let [month-kw (-> month dt/month-number str keyword)]
-    (assoc-in db [:transaction-view :selected-month] month-kw))))
+    (set-selected-transaction-month db month-kw))))
 
 ;; (re-frame/reg-event-db
 ;;  ::set-selected-transaction-month
